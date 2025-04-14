@@ -42,7 +42,9 @@
   </div>
 
   <script>
-    // Firebase configuration (unchanged)
+  // Wait for the DOM to fully load
+  document.addEventListener("DOMContentLoaded", () => {
+    // Firebase configuration
     const firebaseConfig = {
       apiKey: "AIzaSyAnujd0rgEBYUVly32YOsQNBnuOYzVw8u0",
       authDomain: "work-hours-tracker-f48a6.firebaseapp.com",
@@ -53,11 +55,11 @@
       appId: "1:945814366512:web:778a312b936701199940f5"
     };
 
-    // Initialize Firebase (unchanged)
+    // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // DOM elements (unchanged)
+    // DOM elements
     const entryForm = document.getElementById("entryForm");
     const filterForm = document.getElementById("filterForm");
     const resetBtn = document.getElementById("resetBtn");
@@ -67,10 +69,10 @@
     const exportCsvBtn = document.getElementById("exportCsvBtn");
     const exportExcelBtn = document.getElementById("exportExcelBtn");
 
-    // Global entries store (unchanged)
+    // Global entries store
     let allEntries = [];
 
-    // Utility functions (unchanged)
+    // Utility: Get the start of the week (Sunday, 00:00:00)
     function getWeekStart(date) {
       const d = new Date(date);
       d.setDate(d.getDate() - d.getDay());
@@ -78,10 +80,12 @@
       return d;
     }
 
+    // Utility: Format date for input fields (YYYY-MM-DD)
     function formatDateForInput(date) {
       return date.toISOString().split("T")[0];
     }
 
+    // Utility: Count weeks between two dates (inclusive of start week)
     function countWeeksInRange(startDate, endDate) {
       const start = getWeekStart(new Date(startDate));
       const end = getWeekStart(new Date(endDate));
@@ -90,7 +94,7 @@
       return Math.max(1, diffWeeks);
     }
 
-    // Render table (unchanged)
+    // Render table with entries
     function renderTable(entries) {
       const sortedEntries = [...entries].sort((a, b) => new Date(b.date) - new Date(a.date));
       const rows = sortedEntries.map(entry => `
@@ -111,8 +115,9 @@
       attachTableListeners();
     }
 
-    // Attach table listeners (unchanged)
+    // Attach listeners to table inputs and buttons
     function attachTableListeners() {
+      // Edit date or hours
       document.querySelectorAll(".date-field, .hours-field").forEach(input => {
         input.addEventListener("change", async e => {
           const row = e.target.closest("tr");
@@ -134,6 +139,7 @@
         });
       });
 
+      // Delete entry
       document.querySelectorAll(".delete-btn").forEach(btn => {
         btn.addEventListener("click", async e => {
           if (!confirm("Are you sure you want to delete this entry?")) return;
@@ -147,6 +153,7 @@
         });
       });
 
+      // Add new entry (table row)
       document.getElementById("addBtn").addEventListener("click", async () => {
         const date = document.getElementById("newDate").value;
         const hours = parseFloat(document.getElementById("newHours").value);
@@ -165,7 +172,7 @@
       });
     }
 
-    // Export to CSV (unchanged)
+    // Export to CSV
     exportCsvBtn.addEventListener("click", () => {
       const csv = ["Date,Hours"];
       allEntries.forEach(entry => csv.push(`${entry.date},${entry.hours}`));
@@ -178,7 +185,7 @@
       URL.revokeObjectURL(url);
     });
 
-    // Export to Excel (unchanged)
+    // Export to Excel
     exportExcelBtn.addEventListener("click", () => {
       const ws = XLSX.utils.json_to_sheet(allEntries.map(e => ({ Date: e.date, Hours: e.hours })));
       const wb = XLSX.utils.book_new();
@@ -186,7 +193,7 @@
       XLSX.writeFile(wb, "work_hours.xlsx");
     });
 
-    // Form submission: Add new entry (unchanged)
+    // Form submission: Add new entry
     entryForm.addEventListener("submit", async e => {
       e.preventDefault();
       const date = document.getElementById("date").value;
@@ -204,9 +211,10 @@
       }
     });
 
-    // Update stats for selected period (unchanged)
+    // Update stats for selected period
     function updateSelectedPeriodStats(entries, startDate = null, endDate = null) {
       const totalHours = entries.reduce((sum, e) => sum + e.hours, 0);
+      
       let weeksInPeriod = 1;
       if (startDate && endDate) {
         weeksInPeriod = countWeeksInRange(startDate, endDate);
@@ -214,6 +222,7 @@
         const weekStarts = new Set(entries.map(e => getWeekStart(new Date(e.date)).toISOString()));
         weeksInPeriod = weekStarts.size || 1;
       }
+      
       const expectedHours = weeksInPeriod * 40;
       document.getElementById("thisWeekHours").textContent = totalHours.toFixed(1);
       document.getElementById("expectedHours").textContent = expectedHours.toFixed(1);
@@ -267,7 +276,7 @@
       });
     }
 
-    // Update global stats (unchanged)
+    // Update global stats
     function updateGlobalStats(entries, startDate = null, endDate = null) {
       const globalTotal = entries.reduce((sum, e) => sum + e.hours, 0);
       const weeks = {};
@@ -342,7 +351,7 @@
       });
     }
 
-    // Filter form submission (unchanged)
+    // Filter form submission
     filterForm.addEventListener("submit", e => {
       e.preventDefault();
       const startDate = document.getElementById("startDate").value;
@@ -368,10 +377,10 @@
       renderTable(filtered);
       updateSelectedPeriodStats(filtered, start, end);
       updateGlobalStats(filtered, start, end);
-      renderCalendarHeatmap(filtered); // Update heatmap with filtered data
+      renderCalendarHeatmap(filtered);
     });
 
-    // Reset filter (unchanged)
+    // Reset filter
     resetBtn.addEventListener("click", () => {
       document.getElementById("startDate").value = "";
       document.getElementById("endDate").value = "";
@@ -382,7 +391,7 @@
       renderCalendarHeatmap(allEntries);
     });
 
-    // Current week filter (unchanged except for typo fix)
+    // Current week filter
     currentWeekBtn.addEventListener("click", () => {
       const today = new Date();
       const weekStart = getWeekStart(today);
@@ -400,11 +409,11 @@
 
       renderTable(filtered);
       updateSelectedPeriodStats(filtered, weekStart, weekEnd);
-      updateGlobalStats(filtered, weekStart, weekEnd); // Fixed typo: weakStart → weekStart
+      updateGlobalStats(filtered, weekStart, weekEnd);
       renderCalendarHeatmap(filtered);
     });
 
-    // Previous week filter (unchanged)
+    // Previous week filter
     prevWeekBtn.addEventListener("click", () => {
       const today = new Date();
       const weekStart = getWeekStart(today);
@@ -430,26 +439,22 @@
 
     // Render Calendar Heatmap
     function renderCalendarHeatmap(entries) {
-      // Clear previous heatmap
       document.getElementById("calendar-heatmap").innerHTML = "";
 
-      // Prepare data: { timestamp: hours }
       const data = {};
       entries.forEach(e => {
-        // Convert date to start of day timestamp (in seconds)
         const date = new Date(e.date);
         date.setHours(0, 0, 0, 0);
         const timestamp = Math.floor(date.getTime() / 1000);
         data[timestamp] = (data[timestamp] || 0) + e.hours;
       });
 
-      // Initialize CalHeatmap
       const cal = new CalHeatmap();
       cal.paint({
         itemSelector: "#calendar-heatmap",
         domain: { type: "month" },
         subDomain: { type: "day" },
-        range: 6, // Show 6 months
+        range: 6,
         data: {
           source: data,
           type: "json",
@@ -461,7 +466,7 @@
           color: {
             type: "linear",
             range: ["#e6f3ff", "#004085"],
-            domain: [0, 10] // Adjust based on expected max hours per day
+            domain: [0, 10]
           }
         },
         legend: {
@@ -472,7 +477,7 @@
       });
     }
 
-    // Firebase data listener (updated to call heatmap)
+    // Firebase data listener
     db.ref("entries").on("value", snapshot => {
       try {
         const data = snapshot.val() || {};
@@ -490,6 +495,5 @@
         document.getElementById("weekStatus").textContent = "Error loading data";
       }
     });
-  </script>
-</body>
-</html>
+  }); // End of DOMContentLoaded
+</script>
