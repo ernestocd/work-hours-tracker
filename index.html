@@ -545,6 +545,7 @@
         renderTable(allEntries);
         updateSelectedPeriodStats(allEntries);
         updateGlobalStats(allEntries);
+        renderCalendarHeatmap(allEntries);
       } catch (error) {
         console.error("Error loading entries:", error);
         document.getElementById("weekStatus").textContent = "Error loading data";
