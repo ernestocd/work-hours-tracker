@@ -22,30 +22,39 @@
     .btn-sm { padding: 0.25rem 0.5rem; }
     #calendar-heatmap { height: 300px; width: 100%; }
     .calendar-container { position: relative; }
-    .calendar-maximized #calendar-heatmap { 
-      height: 80vh; 
-      width: 100vw; 
-      position: fixed; 
-      top: 0; 
-      left: 0; 
-      z-index: 1000; 
-      background: white; 
+    .calendar-maximized {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1000;
+      background: white;
+      padding: 1rem;
+      margin: 0;
+    }
+    .calendar-maximized #calendar-heatmap {
+      height: calc(100vh - 60px); /* Adjust for button and padding */
+      width: 100%;
     }
     .calendar-maximized .maximize-btn { display: none; }
     .calendar-maximized .minimize-btn { display: block; }
-    .minimize-btn { 
-      display: none; 
-      position: fixed; 
-      top: 10px; 
-      right: 10px; 
-      z-index: 1001; 
+    .minimize-btn {
+      display: none;
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      z-index: 1001;
     }
     @media (max-width: 576px) {
       body { padding: 1rem; }
       .btn-sm { font-size: 0.75rem; }
       #calendar-heatmap { height: 200px; }
-      .calendar-maximized #calendar-heatmap { 
-        height: 90vh; 
+      .calendar-maximized {
+        padding: 0.5rem;
+      }
+      .calendar-maximized #calendar-heatmap {
+        height: calc(100vh - 50px); /* Adjust for smaller button */
       }
     }
   </style>
@@ -505,7 +514,7 @@
           },
           calendar: {
             range: [startDate, endDate],
-            cellSize: ['auto', 20],
+            cellSize: ['auto', window.innerWidth <= 576 ? 16 : 20],
             itemStyle: {
               borderColor: '#fff'
             }
@@ -559,6 +568,13 @@
           }
         });
       }
+
+      // Resize handler for responsiveness
+      window.addEventListener("resize", () => {
+        if (calendarChart) {
+          calendarChart.resize();
+        }
+      });
 
       // Event listeners
       if (elements.entryForm) {
