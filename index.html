@@ -427,15 +427,21 @@
         elements.goalWeeks.textContent = goalWeeks;
         elements.daysWorked.textContent = `${daysWorked}/${totalPossibleDays}`;
 
-        // Calculate Worked vs Not Worked for the new chart
+        // Calculate Worked vs Not Worked with percentages
         const daysNotWorked = entries.filter(e => e.hours === 0).length;
-        const daysWorkedCount = daysWorked; // Already calculated as uniqueDays.size
+        const daysWorkedCount = daysWorked;
+        const totalEntries = entries.length;
+        const workedPercent = totalEntries > 0 ? Math.round((daysWorkedCount / totalEntries) * 100) : 0;
+        const notWorkedPercent = totalEntries > 0 ? Math.round((daysNotWorked / totalEntries) * 100) : 0;
 
         if (window.workedVsNotWorkedChart instanceof Chart) window.workedVsNotWorkedChart.destroy();
         window.workedVsNotWorkedChart = new Chart(elements.workedVsNotWorkedChart, {
           type: "doughnut",
           data: {
-            labels: ["Worked Days", "Not Worked Days"],
+            labels: [
+              `Worked Days: ${daysWorkedCount} (${workedPercent}%)`,
+              `Not Worked Days: ${daysNotWorked} (${notWorkedPercent}%)`
+            ],
             datasets: [{
               data: [daysWorkedCount, daysNotWorked],
               backgroundColor: ["#28a745", "#ff0000"]
@@ -595,11 +601,27 @@
           else if (hours > 8) stats.eightPlus++;
         });
 
+        // Calculate percentages for Heatmap Statistics
+        const totalEntries = entries.length;
+        const zeroPercent = totalEntries > 0 ? Math.round((stats.zero / totalEntries) * 100) : 0;
+        const zeroToTwoPercent = totalEntries > 0 ? Math.round((stats.zeroToTwo / totalEntries) * 100) : 0;
+        const twoToFourPercent = totalEntries > 0 ? Math.round((stats.twoToFour / totalEntries) * 100) : 0;
+        const fourToSixPercent = totalEntries > 0 ? Math.round((stats.fourToSix / totalEntries) * 100) : 0;
+        const sixToEightPercent = totalEntries > 0 ? Math.round((stats.sixToEight / totalEntries) * 100) : 0;
+        const eightPlusPercent = totalEntries > 0 ? Math.round((stats.eightPlus / totalEntries) * 100) : 0;
+
         if (heatmapStatsPie instanceof Chart) heatmapStatsPie.destroy();
         heatmapStatsPie = new Chart(elements.heatmapStatsPie, {
           type: 'pie',
           data: {
-            labels: ['0 hrs (No Work)', '0-2 hrs', '2-4 hrs', '4-6 hrs', '6-8 hrs', '8+ hrs'],
+            labels: [
+              `0 hrs (No Work): ${stats.zero} (${zeroPercent}%)`,
+              `0-2 hrs: ${stats.zeroToTwo} (${zeroToTwoPercent}%)`,
+              `2-4 hrs: ${stats.twoToFour} (${twoToFourPercent}%)`,
+              `4-6 hrs: ${stats.fourToSix} (${fourToSixPercent}%)`,
+              `6-8 hrs: ${stats.sixToEight} (${sixToEightPercent}%)`,
+              `8+ hrs: ${stats.eightPlus} (${eightPlusPercent}%)`
+            ],
             datasets: [{
               data: [
                 stats.zero,
