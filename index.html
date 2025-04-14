@@ -98,6 +98,7 @@
         <div class="progress mb-2">
           <div id="weekProgress" class="progress-bar" role="progressbar" style="width: 0%;"></div>
         </div>
+        <p>Weeks: <strong id="selectedWeeks">0</strong></p>
         <p id="weekStatus" class="text-muted small"></p>
         <canvas id="donutChart"></canvas>
       </div>
@@ -156,10 +157,12 @@
     // Global entries store
     let allEntries = [];
 
-    // Utility: Get the start of the week (Sunday, 00:00:00)
+    // Utility: Get the start of the workweek (Saturday, 00:00:00)
     function getWeekStart(date) {
       const d = new Date(date);
-      d.setDate(d.getDate() - d.getDay());
+      // Adjust to Saturday: getDay() = 0 (Sun), 1 (Mon), ..., 6 (Sat)
+      // Offset = (getDay() + 1) % 7 to align to previous Saturday
+      d.setDate(d.getDate() - ((d.getDay() + 1) % 7));
       d.setHours(0, 0, 0, 0);
       return d;
     }
@@ -169,13 +172,14 @@
       return date.toISOString().split("T")[0];
     }
 
-    // Utility: Count weeks between two dates (inclusive of start week)
-    function countWeeksInRange(startDate, endDate) {
-      const start = getWeekStart(new Date(startDate));
-      const end = getWeekStart(new Date(endDate));
-      const diffTime = Math.abs(end - start);
-      const diffWeeks = Math.floor(diffTime / (7 * 24 * 60 * 60 * 1000)) + 1;
-      return Math.max(1, diffWeeks);
+    // Utility: Count weeks with entries
+    function countWeeksWithEntries(entries) {
+      const weeks = {};
+      entries.forEach(e => {
+        const weekStart = getWeekStart(new Date(e.date)).toISOString().split("T")[0];
+        weeks[weekStart] = true;
+      });
+      return Object.keys(weeks).length;
     }
 
     // Render table with entries
@@ -201,7 +205,6 @@
 
     // Attach listeners to table inputs and buttons
     function attachTableListeners() {
-      // Edit date or hours
       document.querySelectorAll(".date-field, .hours-field").forEach(input => {
         input.addEventListener("change", async e => {
           const row = e.target.closest("tr");
@@ -223,7 +226,6 @@
         });
       });
 
-      // Delete entry
       document.querySelectorAll(".delete-btn").forEach(btn => {
         btn.addEventListener("click", async e => {
           if (!confirm("Are you sure you want to delete this entry?")) return;
@@ -237,7 +239,6 @@
         });
       });
 
-      // Add new entry (table row)
       document.getElementById("addBtn").addEventListener("click", async () => {
         const date = document.getElementById("newDate").value;
         const hours = parseFloat(document.getElementById("newHours").value);
@@ -298,7 +299,7 @@
     // Update stats for selected period
     function updateSelectedPeriodStats(entries) {
       const totalHours = entries.reduce((sum, e) => sum + e.hours, 0);
-      const expectedHours = 40; // Fixed for one week
+      const expectedHours = 40;
       document.getElementById("thisWeekHours").textContent = totalHours.toFixed(1);
       document.getElementById("expectedHours").textContent = expectedHours;
 
@@ -311,6 +312,9 @@
         status = `➕ ${(totalHours - expectedHours).toFixed(1)} hrs over`;
       }
       document.getElementById("weekStatus").textContent = status;
+
+      const selectedWeeks = countWeeksWithEntries(entries);
+      document.getElementById("selectedWeeks").textContent = selectedWeeks;
 
       // Donut chart
       if (window.donutChart instanceof Chart) window.donutChart.destroy();
@@ -332,14 +336,14 @@
       // Weekly bar chart
       const dailyHours = Array(7).fill(0);
       entries.forEach(e => {
-        const day = new Date(e.date).getDay();
+        const day = (new Date(e.date).getDay() + 1) % 7; // Shift: Sat=0, Sun=1, ..., Fri=6
         dailyHours[day] += e.hours;
       });
       if (window.barChart instanceof Chart) window.barChart.destroy();
       window.barChart = new Chart(document.getElementById("weeklyBarChart"), {
         type: "bar",
         data: {
-          labels: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+          labels: ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"],
           datasets: [{
             label: "Hours",
             data: dailyHours,
@@ -353,7 +357,8 @@
     }
 
     // Update global stats
-    function updateGlobalStats(entries, startDate = null, endDate = null) {
+    function updateGlobalStats() {
+      const entries = allEntries;
       const globalTotal = entries.reduce((sum, e) => sum + e.hours, 0);
       const weeks = {};
       entries.forEach(e => {
@@ -361,10 +366,7 @@
         weeks[weekStart] = (weeks[weekStart] || 0) + e.hours;
       });
 
-      const totalWeeks = startDate && endDate
-        ? countWeeksInRange(startDate, endDate)
-        : Object.keys(weeks).length || 1;
-
+      const totalWeeks = Object.keys(weeks).length || 1;
       const avgWeek = totalWeeks > 0 ? globalTotal / totalWeeks : 0;
       const avgDay = entries.length > 0 ? globalTotal / entries.length : 0;
       const maxDay = entries.length > 0 ? Math.max(...entries.map(e => e.hours)) : 0;
@@ -444,7 +446,6 @@
 
       renderTable(filtered);
       updateSelectedPeriodStats(filtered);
-      updateGlobalStats(filtered, start, end);
     });
 
     // Reset filter
@@ -454,7 +455,6 @@
       document.getElementById("weekStatus").textContent = "";
       renderTable(allEntries);
       updateSelectedPeriodStats(allEntries);
-      updateGlobalStats(allEntries);
     });
 
     // Current week filter
@@ -462,7 +462,7 @@
       const today = new Date();
       const weekStart = getWeekStart(today);
       const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekEnd.getDate() + 6);
+      weekEnd.setDate(weekEnd.getDate() + 6); // Friday
       weekEnd.setHours(23, 59, 59, 999);
 
       document.getElementById("startDate").value = formatDateForInput(weekStart);
@@ -475,7 +475,6 @@
 
       renderTable(filtered);
       updateSelectedPeriodStats(filtered);
-      updateGlobalStats(filtered, weekStart, weekEnd);
     });
 
     // Previous week filter
@@ -498,7 +497,6 @@
 
       renderTable(filtered);
       updateSelectedPeriodStats(filtered);
-      updateGlobalStats(filtered, prevWeekStart, prevWeekEnd);
     });
 
     // Firebase data listener
@@ -512,7 +510,7 @@
         }));
         renderTable(allEntries);
         updateSelectedPeriodStats(allEntries);
-        updateGlobalStats(allEntries);
+        updateGlobalStats();
       } catch (error) {
         console.error("Error loading entries:", error);
         document.getElementById("weekStatus").textContent = "Error loading data";
