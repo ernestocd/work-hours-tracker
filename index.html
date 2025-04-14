@@ -151,14 +151,15 @@
 
       const groupedWeeks = {};
       allEntries.forEach(e => {
-        const key = getWeekStart(e.date).toISOString().slice(0, 10);
+        const weekStart = getWeekStart(e.date);
+        const key = weekStart ? weekStart.toISOString().slice(0, 10) : 'unknown';
         if (!groupedWeeks[key]) groupedWeeks[key] = 0;
         groupedWeeks[key] += e.hours;
       });
 
-      const totalWeeks = Object.keys(groupedWeeks).length;
+      const totalWeeks = Math.max(1, Object.keys(groupedWeeks).length);
       const globalTotal = allEntries.reduce((sum, e) => sum + e.hours, 0);
-      const avgWeek = totalWeeks ? globalTotal / totalWeeks : 0;
+      const avgWeek = globalTotal / totalWeeks;
       const avgDay = allEntries.length ? globalTotal / allEntries.length : 0;
       const maxDay = allEntries.length ? Math.max(...allEntries.map(e => e.hours)) : 0;
       const goalWeeks = Object.values(groupedWeeks).filter(h => h >= 40).length;
