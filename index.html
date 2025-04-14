@@ -562,23 +562,24 @@
 }
 
     // Firebase data listener
-    db.ref("entries").on("value", snapshot => {
-      try {
-        const data = snapshot.val() || {};
-        allEntries = Object.entries(data).map(([id, entry]) => ({
-          id,
-          date: entry.date,
-          hours: parseFloat(entry.hours)
-        }));
-        renderTable(allEntries);
-        updateSelectedPeriodStats(allEntries);
-        updateGlobalStats(allEntries);
-        renderCalendarHeatmap(allEntries);
-      } catch (error) {
-        console.error("Error loading entries:", error);
-        document.getElementById("weekStatus").textContent = "Error loading data";
-      }
-    });
+db.ref("entries").on("value", snapshot => {
+  try {
+    const data = snapshot.val() || {};
+    allEntries = Object.entries(data).map(([id, entry]) => ({
+      id,
+      date: entry.date,
+      hours: parseFloat(entry.hours)
+    }));
+    renderTable(allEntries);
+    updateSelectedPeriodStats(allEntries);
+    updateGlobalStats(allEntries);
+    renderCalendarHeatmap(allEntries);  // ← Add this line
+  } catch (error) {
+    console.error("Error loading entries:", error);
+    document.getElementById("weekStatus").textContent = "Error loading data";
+  }
+});
+
 
   </script>
 </body>
