@@ -31,10 +31,29 @@
       </div>
     </form>
 
+    <form id="filterForm" class="mb-4">
+      <div class="row g-2 align-items-end">
+        <div class="col-md-4">
+          <label>Start Date</label>
+          <input type="date" id="startDate" class="form-control" />
+        </div>
+        <div class="col-md-4">
+          <label>End Date</label>
+          <input type="date" id="endDate" class="form-control" />
+        </div>
+        <div class="col-md-2">
+          <button type="submit" class="btn btn-secondary w-100">Filter</button>
+        </div>
+        <div class="col-md-2">
+          <button type="button" id="resetBtn" class="btn btn-outline-secondary w-100">Reset</button>
+        </div>
+      </div>
+    </form>
+
     <div class="row">
       <div class="col-md-4 stat-box">
-        <h5>This Week</h5>
-        <p><strong id="thisWeekHours">0</strong> / 40 hrs</p>
+        <h5>Selected Period</h5>
+        <p><strong id="thisWeekHours">0</strong> / <span id="expectedHours">40</span> hrs</p>
         <div class="progress mb-2">
           <div id="weekProgress" class="progress-bar" role="progressbar" style="width: 0%;"></div>
         </div>
@@ -82,13 +101,15 @@
     const db = firebase.database();
 
     const entryForm = document.getElementById("entryForm");
-    const dateInput = document.getElementById("date");
-    const hoursInput = document.getElementById("hours");
+    const filterForm = document.getElementById("filterForm");
+    const resetBtn = document.getElementById("resetBtn");
+
+    let allEntries = [];
 
     entryForm.addEventListener("submit", (e) => {
       e.preventDefault();
-      const date = dateInput.value;
-      const hours = parseFloat(hoursInput.value);
+      const date = document.getElementById("date").value;
+      const hours = parseFloat(document.getElementById("hours").value);
       const id = db.ref("entries").push().key;
       db.ref("entries/" + id).set({ date, hours });
       entryForm.reset();
@@ -100,67 +121,45 @@
       return new Date(d.setDate(diff));
     }
 
-    db.ref("entries").on("value", (snapshot) => {
-      const data = snapshot.val() || {};
-      const entries = Object.values(data).map((d) => ({
-        ...d,
-        date: new Date(d.date),
-      }));
+    function updateDashboard(filteredEntries) {
+      filteredEntries.sort((a, b) => a.date - b.date);
 
-      entries.sort((a, b) => a.date - b.date);
+      const totalHours = filteredEntries.reduce((sum, e) => sum + e.hours, 0);
+      const daysInRange = [...new Set(filteredEntries.map(e => e.date.toDateString()))].length;
+      const expectedHours = daysInRange >= 7 ? Math.floor(daysInRange / 7) * 40 : 40;
 
-      const thisSunday = getWeekStart(new Date());
-      const weekEntries = entries.filter(
-        (e) => getWeekStart(e.date).getTime() === thisSunday.getTime()
-      );
-      const totalWeek = weekEntries.reduce((sum, e) => sum + e.hours, 0);
-      const percent = Math.min(100, (totalWeek / 40) * 100);
+      document.getElementById("thisWeekHours").textContent = totalHours.toFixed(1);
+      document.getElementById("expectedHours").textContent = expectedHours;
 
-      document.getElementById("thisWeekHours").textContent = totalWeek.toFixed(1);
+      const percent = Math.min(100, (totalHours / expectedHours) * 100);
       document.getElementById("weekProgress").style.width = percent + "%";
-      let statusMsg =
-        totalWeek >= 40
-          ? "✅ Goal met!"
-          : `❌ ${Math.round(40 - totalWeek)} hrs short.`;
-      if (totalWeek > 40)
-        statusMsg = `➕ ${Math.round(totalWeek - 40)} hrs over.`;
+      let statusMsg = totalHours >= expectedHours ? "✅ Goal met!" : `❌ ${Math.round(expectedHours - totalHours)} hrs short.`;
+      if (totalHours > expectedHours) statusMsg = `➕ ${Math.round(totalHours - expectedHours)} hrs over.`;
       document.getElementById("weekStatus").textContent = statusMsg;
 
-      // Donut Chart
       if (window.donutChart) window.donutChart.destroy();
       window.donutChart = new Chart(document.getElementById("donutChart"), {
         type: "doughnut",
         data: {
           labels: ["Worked", "Remaining"],
-          datasets: [
-            {
-              data: [totalWeek, Math.max(0, 40 - totalWeek)],
-              backgroundColor: ["#0d6efd", "#dee2e6"],
-              borderWidth: 1,
-            },
-          ],
+          datasets: [{ data: [totalHours, Math.max(0, expectedHours - totalHours)], backgroundColor: ["#0d6efd", "#dee2e6"], borderWidth: 1 }]
         },
-        options: {
-          cutout: "75%",
-          plugins: { legend: { display: false } },
-        },
+        options: { cutout: "75%", plugins: { legend: { display: false } } }
       });
 
-      // Global Stats
-      const globalTotal = entries.reduce((sum, e) => sum + e.hours, 0);
       const groupedWeeks = {};
-      entries.forEach((e) => {
+      allEntries.forEach(e => {
         const key = getWeekStart(e.date).toISOString().slice(0, 10);
         if (!groupedWeeks[key]) groupedWeeks[key] = 0;
         groupedWeeks[key] += e.hours;
       });
+
       const totalWeeks = Object.keys(groupedWeeks).length;
+      const globalTotal = allEntries.reduce((sum, e) => sum + e.hours, 0);
       const avgWeek = totalWeeks ? globalTotal / totalWeeks : 0;
-      const avgDay = entries.length ? globalTotal / entries.length : 0;
-      const maxDay = entries.length
-        ? Math.max(...entries.map((e) => e.hours))
-        : 0;
-      const goalWeeks = Object.values(groupedWeeks).filter((h) => h >= 40).length;
+      const avgDay = allEntries.length ? globalTotal / allEntries.length : 0;
+      const maxDay = allEntries.length ? Math.max(...allEntries.map(e => e.hours)) : 0;
+      const goalWeeks = Object.values(groupedWeeks).filter(h => h >= 40).length;
 
       document.getElementById("globalTotal").textContent = globalTotal.toFixed(1);
       document.getElementById("weeksTracked").textContent = totalWeeks;
@@ -169,40 +168,46 @@
       document.getElementById("maxDay").textContent = maxDay.toFixed(1);
       document.getElementById("goalWeeks").textContent = goalWeeks;
 
-      // Bar chart (weekdays)
       const dailyHours = Array(7).fill(0);
-      weekEntries.forEach((e) => {
-        dailyHours[e.date.getDay()] += e.hours;
-      });
+      filteredEntries.forEach(e => dailyHours[e.date.getDay()] += e.hours);
       if (window.barChart) window.barChart.destroy();
       window.barChart = new Chart(document.getElementById("weeklyBarChart"), {
         type: "bar",
-        data: {
-          labels: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-          datasets: [
-            { label: "Hours", data: dailyHours, backgroundColor: "#0d6efd" },
-          ],
-        },
+        data: { labels: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], datasets: [{ label: "Hours", data: dailyHours, backgroundColor: "#0d6efd" }] }
       });
 
-      // Line chart (weekly trend)
       const weekLabels = Object.keys(groupedWeeks);
-      const weekValues = weekLabels.map((k) => groupedWeeks[k]);
+      const weekValues = weekLabels.map(k => groupedWeeks[k]);
       if (window.lineChart) window.lineChart.destroy();
       window.lineChart = new Chart(document.getElementById("trendLineChart"), {
         type: "line",
-        data: {
-          labels: weekLabels,
-          datasets: [
-            {
-              label: "Weekly Hours",
-              data: weekValues,
-              borderColor: "#198754",
-              fill: false,
-            },
-          ],
-        },
+        data: { labels: weekLabels, datasets: [{ label: "Weekly Hours", data: weekValues, borderColor: "#198754", fill: false }] }
       });
+    }
+
+    db.ref("entries").on("value", snapshot => {
+      const data = snapshot.val() || {};
+      allEntries = Object.values(data).map(d => ({ ...d, date: new Date(d.date) }));
+      const thisSunday = getWeekStart(new Date());
+      const defaultWeek = allEntries.filter(e => getWeekStart(e.date).getTime() === thisSunday.getTime());
+      updateDashboard(defaultWeek);
+    });
+
+    filterForm.addEventListener("submit", e => {
+      e.preventDefault();
+      const start = new Date(document.getElementById("startDate").value);
+      const end = new Date(document.getElementById("endDate").value);
+      if (!start || !end || start > end) return alert("Please select a valid date range.");
+      const filtered = allEntries.filter(e => e.date >= start && e.date <= end);
+      updateDashboard(filtered);
+    });
+
+    resetBtn.addEventListener("click", () => {
+      const thisSunday = getWeekStart(new Date());
+      const defaultWeek = allEntries.filter(e => getWeekStart(e.date).getTime() === thisSunday.getTime());
+      updateDashboard(defaultWeek);
+      document.getElementById("startDate").value = "";
+      document.getElementById("endDate").value = "";
     });
   </script>
 </body>
