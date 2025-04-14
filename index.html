@@ -18,14 +18,13 @@
   <div class="container">
     <h1 class="mb-4">📊 Work Hours Tracker</h1>
 
-    <!-- Entry Form -->
     <form id="entryForm" class="mb-4">
       <div class="row g-2">
         <div class="col-md-4">
-          <input type="date" id="date" class="form-control" required />
+          <input type="date" id="date" class="form-control" required aria-label="Date" />
         </div>
         <div class="col-md-4">
-          <input type="number" id="hours" class="form-control" placeholder="Hours Worked" step="0.1" min="0" required />
+          <input type="number" id="hours" class="form-control" placeholder="Hours Worked" step="0.1" min="0" required aria-label="Hours" />
         </div>
         <div class="col-md-4">
           <button type="submit" class="btn btn-primary w-100">Add Entry</button>
@@ -33,16 +32,15 @@
       </div>
     </form>
 
-    <!-- Filter Form -->
     <form id="filterForm" class="mb-4">
       <div class="row g-2 align-items-end">
         <div class="col-md-4">
-          <label>Start Date</label>
-          <input type="date" id="startDate" class="form-control" />
+          <label for="startDate">Start Date</label>
+          <input type="date" id="startDate" class="form-control" aria-label="Start Date" />
         </div>
         <div class="col-md-4">
-          <label>End Date</label>
-          <input type="date" id="endDate" class="form-control" />
+          <label for="endDate">End Date</label>
+          <input type="date" id="endDate" class="form-control" aria-label="End Date" />
         </div>
         <div class="col-md-2">
           <button type="submit" class="btn btn-secondary w-100">Filter</button>
@@ -53,7 +51,6 @@
       </div>
     </form>
 
-    <!-- Stats Section -->
     <div class="row">
       <div class="col-md-4 stat-box">
         <h5>Selected Period</h5>
@@ -80,7 +77,6 @@
       </div>
     </div>
 
-    <!-- Charts -->
     <div class="row mt-4">
       <div class="col-md-6">
         <canvas id="weeklyBarChart"></canvas>
@@ -115,9 +111,12 @@
       e.preventDefault();
       const date = document.getElementById("date").value;
       const hours = parseFloat(document.getElementById("hours").value);
-      const id = db.ref("entries").push().key;
-      db.ref("entries/" + id).set({ date, hours });
-      entryForm.reset();
+      try {
+        db.ref("entries").push({ date, hours });
+        entryForm.reset();
+      } catch (error) {
+        document.getElementById("weekStatus").textContent = "Error saving entry";
+      }
     });
 
     function getWeekStart(date) {
@@ -130,18 +129,17 @@
 
     function updateSelectedPeriodStats(filtered) {
       const totalHours = filtered.reduce((sum, e) => sum + e.hours, 0);
-      const expected = Math.max(40, Math.floor(filtered.length / 7) * 40);
+      const expected = filtered.length >= 7 ? Math.ceil(filtered.length / 7) * 40 : 40;
 
       document.getElementById("thisWeekHours").textContent = totalHours.toFixed(1);
       document.getElementById("expectedHours").textContent = expected;
 
       const percent = Math.min(100, (totalHours / expected) * 100);
       document.getElementById("weekProgress").style.width = percent + "%";
-
       let status = totalHours >= expected
         ? "✅ Goal met!"
-        : `❌ ${Math.round(expected - totalHours)} hrs short.`;
-      if (totalHours > expected) status = `➕ ${Math.round(totalHours - expected)} hrs over.`;
+        : `❌ ${Math.round(expected - totalHours)} hrs short`;
+      if (totalHours > expected) status = `➕ ${Math.round(totalHours - expected)} hrs over`;
       document.getElementById("weekStatus").textContent = status;
 
       if (window.donutChart instanceof Chart) window.donutChart.destroy();
@@ -151,7 +149,10 @@
           labels: ["Worked", "Remaining"],
           datasets: [{ data: [totalHours, Math.max(0, expected - totalHours)], backgroundColor: ["#0d6efd", "#dee2e6"] }]
         },
-        options: { cutout: "75%", plugins: { legend: { display: false } } }
+        options: {
+          cutout: "75%",
+          plugins: { legend: { position: "bottom" } }
+        }
       });
 
       const dailyHours = Array(7).fill(0);
@@ -162,6 +163,11 @@
         data: {
           labels: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
           datasets: [{ label: "Hours", data: dailyHours, backgroundColor: "#0d6efd" }]
+        },
+        options: {
+          scales: {
+            y: { beginAtZero: true }
+          }
         }
       });
     }
@@ -177,7 +183,7 @@
       const totalWeeks = Math.max(1, Object.keys(groupedWeeks).length);
       const avgWeek = globalTotal / totalWeeks;
       const avgDay = entries.length ? globalTotal / entries.length : 0;
-      const maxDay = Math.max(...entries.map(e => e.hours));
+      const maxDay = entries.length ? Math.max(...entries.map(e => e.hours)) : 0;
       const goalWeeks = Object.values(groupedWeeks).filter(v => v >= 40).length;
 
       document.getElementById("globalTotal").textContent = globalTotal.toFixed(1);
@@ -198,18 +204,18 @@
             annotation: {
               annotations: {
                 goalLine: {
-                  type: 'line',
+                  type: "line",
                   yMin: 40,
                   yMax: 40,
-                  borderColor: 'red',
+                  borderColor: "red",
                   borderWidth: 2,
                   label: {
-                    content: 'Goal (40 hrs)',
+                    content: "Goal (40 hrs)",
                     enabled: true,
-                    position: 'start',
-                    backgroundColor: 'rgba(255, 99, 132, 0.8)',
-                    color: 'white',
-                    font: { style: 'bold' }
+                    position: "start",
+                    backgroundColor: "rgba(255, 99, 132, 0.8)",
+                    color: "white",
+                    font: { style: "bold" }
                   }
                 }
               }
@@ -223,19 +229,27 @@
     }
 
     db.ref("entries").on("value", snapshot => {
-      const data = snapshot.val() || {};
-      allEntries = Object.values(data).map(d => ({ ...d, date: d.date, hours: +d.hours }));
-      const currentWeek = getWeekStart(new Date()).toISOString().slice(0, 10);
-      const filtered = allEntries.filter(e => getWeekStart(new Date(e.date)).toISOString().slice(0, 10) === currentWeek);
-      updateSelectedPeriodStats(filtered);
-      updateGlobalStats(allEntries);
+      try {
+        const data = snapshot.val() || {};
+        allEntries = Object.values(data).map(d => ({ ...d, date: d.date, hours: +d.hours }));
+        const currentWeek = getWeekStart(new Date()).toISOString().slice(0, 10);
+        const filtered = allEntries.filter(e => getWeekStart(new Date(e.date)).toISOString().slice(0, 10) === currentWeek);
+        updateSelectedPeriodStats(filtered);
+        updateGlobalStats(allEntries);
+      } catch (error) {
+        document.getElementById("weekStatus").textContent = "Error loading data";
+      }
     });
 
     filterForm.addEventListener("submit", e => {
       e.preventDefault();
       const start = new Date(document.getElementById("startDate").value);
       const end = new Date(document.getElementById("endDate").value);
-      if (!start || !end || start > end) return alert("Invalid range");
+      end.setHours(23, 59, 59, 999);
+      if (!start || !end || start > end) {
+        document.getElementById("weekStatus").textContent = "Invalid date range";
+        return;
+      }
 
       const filtered = allEntries.filter(e => {
         const date = new Date(e.date);
@@ -247,11 +261,12 @@
     });
 
     resetBtn.addEventListener("click", () => {
+      document.getElementById("startDate").value = "";
+      document.getElementById("endDate").value = "";
       const currentWeek = getWeekStart(new Date()).toISOString().slice(0, 10);
       const filtered = allEntries.filter(e => getWeekStart(new Date(e.date)).toISOString().slice(0, 10) === currentWeek);
       updateSelectedPeriodStats(filtered);
-      document.getElementById("startDate").value = "";
-      document.getElementById("endDate").value = "";
+      updateGlobalStats(allEntries);
     });
   </script>
 </body>
