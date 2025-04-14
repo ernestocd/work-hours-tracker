@@ -374,7 +374,9 @@
       entries.forEach(e => {
         const weekStart = getWeekStart(new Date(e.date)).toISOString().split("T")[0];
         weeks[weekStart] = (weeks[weekStart] || 0) + e.hours;
-        uniqueDays.add(e.date); // Track unique dates
+        if (e.hours > 0) { // Only count days with non-zero hours
+          uniqueDays.add(e.date);
+        }
       });
 
       const totalWeeks = startDate && endDate
@@ -385,8 +387,8 @@
       const daysWorked = uniqueDays.size;
 
       const avgWeek = totalWeeks > 0 ? globalTotal / totalWeeks : 0;
-      const avgDay = entries.length > 0 ? globalTotal / entries.length : 0;
-      const maxDay = entries.length > 0 ? Math.max(...entries.map(e => e.hours)) : 0;
+      const avgDay = uniqueDays.size > 0 ? globalTotal / uniqueDays.size : 0; // Use uniqueDays for avgDay to exclude zero-hour days
+      const maxDay = entries.length > 0 ? Math.max(...entries.filter(e => e.hours > 0).map(e => e.hours), 0) : 0;
       const goalWeeks = Object.values(weeks).filter(hours => hours >= 40).length;
 
       document.getElementById("globalTotal").textContent = globalTotal.toFixed(1);
@@ -495,7 +497,7 @@
 
       renderTable(filtered);
       updateSelectedPeriodStats(filtered, weekStart, weekEnd);
-      updateGlobalStats(filtered, weekStart, weekEnd);
+      updateGlobalStats(filtered, weakStart, weekEnd);
     });
 
     // Previous week filter
