@@ -21,10 +21,32 @@
     .editable:hover { background-color: #f1f1f1; cursor: pointer; }
     .btn-sm { padding: 0.25rem 0.5rem; }
     #calendar-heatmap { height: 300px; width: 100%; }
+    .calendar-container { position: relative; }
+    .calendar-maximized #calendar-heatmap { 
+      height: 80vh; 
+      width: 100vw; 
+      position: fixed; 
+      top: 0; 
+      left: 0; 
+      z-index: 1000; 
+      background: white; 
+    }
+    .calendar-maximized .maximize-btn { display: none; }
+    .calendar-maximized .minimize-btn { display: block; }
+    .minimize-btn { 
+      display: none; 
+      position: fixed; 
+      top: 10px; 
+      right: 10px; 
+      z-index: 1001; 
+    }
     @media (max-width: 576px) {
       body { padding: 1rem; }
       .btn-sm { font-size: 0.75rem; }
       #calendar-heatmap { height: 200px; }
+      .calendar-maximized #calendar-heatmap { 
+        height: 90vh; 
+      }
     }
   </style>
 </head>
@@ -131,8 +153,10 @@
     </div>
 
     <div class="row mt-4">
-      <div class="col-md-12 stat-box">
+      <div class="col-md-12 stat-box calendar-container" id="calendarContainer">
         <h5>Calendar Heatmap</h5>
+        <button class="btn btn-outline-secondary btn-sm maximize-btn" id="maximizeCalendarBtn">Maximize</button>
+        <button class="btn btn-outline-secondary btn-sm minimize-btn" id="minimizeCalendarBtn">Minimize</button>
         <div id="calendar-heatmap"></div>
       </div>
     </div>
@@ -163,6 +187,7 @@
       // State
       let allEntries = [];
       let filteredEntries = [];
+      let calendarChart = null;
 
       // DOM elements with null checks
       const elements = {
@@ -196,7 +221,10 @@
         donutChart: document.getElementById("donutChart"),
         weeklyBarChart: document.getElementById("weeklyBarChart"),
         trendLineChart: document.getElementById("trendLineChart"),
-        calendarHeatmap: document.getElementById("calendar-heatmap")
+        calendarHeatmap: document.getElementById("calendar-heatmap"),
+        calendarContainer: document.getElementById("calendarContainer"),
+        maximizeCalendarBtn: document.getElementById("maximizeCalendarBtn"),
+        minimizeCalendarBtn: document.getElementById("minimizeCalendarBtn")
       };
 
       // Utility functions
@@ -428,7 +456,8 @@
         }
 
         // Initialize ECharts instance
-        const chart = echarts.init(elements.calendarHeatmap);
+        if (calendarChart) calendarChart.dispose();
+        calendarChart = echarts.init(elements.calendarHeatmap);
 
         // Prepare data for ECharts
         const data = entries.map(entry => {
@@ -492,7 +521,7 @@
         };
 
         try {
-          chart.setOption(option);
+          calendarChart.setOption(option);
         } catch (error) {
           console.error("Error rendering ECharts calendar heatmap:", error);
           elements.calendarHeatmap.innerHTML = `
@@ -511,6 +540,25 @@
         updateGlobalStats(entries);
         renderCalendarHeatmap(entries);
       };
+
+      // Maximize/minimize calendar
+      if (elements.maximizeCalendarBtn) {
+        elements.maximizeCalendarBtn.addEventListener("click", () => {
+          elements.calendarContainer.classList.add("calendar-maximized");
+          if (calendarChart) {
+            setTimeout(() => calendarChart.resize(), 100);
+          }
+        });
+      }
+
+      if (elements.minimizeCalendarBtn) {
+        elements.minimizeCalendarBtn.addEventListener("click", () => {
+          elements.calendarContainer.classList.remove("calendar-maximized");
+          if (calendarChart) {
+            setTimeout(() => calendarChart.resize(), 100);
+          }
+        });
+      }
 
       // Event listeners
       if (elements.entryForm) {
