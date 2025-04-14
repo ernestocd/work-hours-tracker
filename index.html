@@ -34,17 +34,24 @@
       margin: 0;
     }
     .calendar-maximized #calendar-heatmap {
-      height: calc(100vh - 60px); /* Adjust for button and padding */
+      height: calc(100vh - 100px); /* Adjust for buttons and padding */
       width: 100%;
     }
     .calendar-maximized .maximize-btn { display: none; }
     .calendar-maximized .minimize-btn { display: block; }
-    .minimize-btn {
+    .calendar-maximized .rotate-btn { display: block; }
+    .minimize-btn, .rotate-btn {
       display: none;
       position: fixed;
+      z-index: 1001;
+    }
+    .minimize-btn {
       top: 10px;
       right: 10px;
-      z-index: 1001;
+    }
+    .rotate-btn {
+      top: 10px;
+      right: 80px; /* Increased spacing to avoid overlap */
     }
     @media (max-width: 576px) {
       body { padding: 1rem; }
@@ -54,7 +61,10 @@
         padding: 0.5rem;
       }
       .calendar-maximized #calendar-heatmap {
-        height: calc(100vh - 50px); /* Adjust for smaller button */
+        height: calc(100vh - 90px); /* Adjust for smaller buttons */
+      }
+      .rotate-btn {
+        right: 60px; /* Adjust spacing for smaller screens */
       }
     }
   </style>
@@ -166,6 +176,7 @@
         <h5>Calendar Heatmap</h5>
         <button class="btn btn-outline-secondary btn-sm maximize-btn" id="maximizeCalendarBtn">Maximize</button>
         <button class="btn btn-outline-secondary btn-sm minimize-btn" id="minimizeCalendarBtn">Minimize</button>
+        <button class="btn btn-outline-secondary btn-sm rotate-btn" id="rotateCalendarBtn">Rotate</button>
         <div id="calendar-heatmap"></div>
       </div>
     </div>
@@ -197,6 +208,7 @@
       let allEntries = [];
       let filteredEntries = [];
       let calendarChart = null;
+      let isCalendarRotated = false;
 
       // DOM elements with null checks
       const elements = {
@@ -233,7 +245,8 @@
         calendarHeatmap: document.getElementById("calendar-heatmap"),
         calendarContainer: document.getElementById("calendarContainer"),
         maximizeCalendarBtn: document.getElementById("maximizeCalendarBtn"),
-        minimizeCalendarBtn: document.getElementById("minimizeCalendarBtn")
+        minimizeCalendarBtn: document.getElementById("minimizeCalendarBtn"),
+        rotateCalendarBtn: document.getElementById("rotateCalendarBtn")
       };
 
       // Utility functions
@@ -493,6 +506,11 @@
           { min: 8, label: '8+ hrs', color: '#004085' }
         ];
 
+        // Adjust cell size and layout based on orientation and screen size
+        const isMaximized = elements.calendarContainer.classList.contains("calendar-maximized");
+        const cellHeight = isMaximized ? (window.innerWidth <= 576 ? 20 : 30) : (window.innerWidth <= 576 ? 16 : 20);
+        const cellWidth = isMaximized ? (window.innerWidth <= 576 ? 20 : 30) : 'auto';
+
         // ECharts calendar heatmap configuration
         const option = {
           tooltip: {
@@ -504,9 +522,9 @@
           visualMap: {
             type: 'piecewise',
             pieces: pieces,
-            orient: 'horizontal',
-            left: 'center',
-            top: 0,
+            orient: isCalendarRotated ? 'vertical' : 'horizontal',
+            left: isCalendarRotated ? 'right' : 'center',
+            top: isCalendarRotated ? 'center' : 0,
             textStyle: {
               color: '#000'
             },
@@ -514,9 +532,18 @@
           },
           calendar: {
             range: [startDate, endDate],
-            cellSize: ['auto', window.innerWidth <= 576 ? 16 : 20],
+            cellSize: isCalendarRotated ? [cellHeight, 'auto'] : ['auto', cellHeight],
+            orient: isCalendarRotated ? 'vertical' : 'horizontal',
             itemStyle: {
               borderColor: '#fff'
+            },
+            splitLine: {
+              show: true,
+              lineStyle: {
+                color: '#000',
+                width: 1,
+                type: 'solid'
+              }
             }
           },
           series: [{
@@ -569,9 +596,25 @@
         });
       }
 
+      // Rotate calendar
+      if (elements.rotateCalendarBtn) {
+        elements.rotateCalendarBtn.addEventListener("click", () => {
+          isCalendarRotated = !isCalendarRotated;
+          // Ensure the calendar is maximized when rotated
+          if (!elements.calendarContainer.classList.contains("calendar-maximized")) {
+            elements.calendarContainer.classList.add("calendar-maximized");
+          }
+          renderCalendarHeatmap(filteredEntries);
+          if (calendarChart) {
+            setTimeout(() => calendarChart.resize(), 100);
+          }
+        });
+      }
+
       // Resize handler for responsiveness
       window.addEventListener("resize", () => {
         if (calendarChart) {
+          renderCalendarHeatmap(filteredEntries); // Re-render to adjust cell sizes
           calendarChart.resize();
         }
       });
