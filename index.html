@@ -1,14 +1,93 @@
-    <div class="mt-5">
-      <h3>🗓️ Manage Entries</h3>
-      <div class="mb-3">
-        <button id="exportCsv" class="btn btn-success">Download CSV</button>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Work Hours Tracker</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.4.0"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <style>
+    body { padding: 2rem; background: #f8f9fa; }
+    .stat-box { border-radius: 12px; background: white; box-shadow: 0 0 10px rgba(0,0,0,0.05); padding: 1rem; margin-bottom: 1rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 class="mb-4">📊 Work Hours Tracker</h1>
+
+    <form id="entryForm" class="mb-4">
+      <div class="row g-2">
+        <div class="col-md-4">
+          <input type="date" id="date" class="form-control" required />
+        </div>
+        <div class="col-md-4">
+          <input type="number" id="hours" class="form-control" placeholder="Hours Worked" step="0.1" min="0" required />
+        </div>
+        <div class="col-md-4">
+          <button type="submit" class="btn btn-primary w-100">Add Entry</button>
+        </div>
       </div>
-      <div id="entriesTable"></div>
+    </form>
+
+    <form id="filterForm" class="mb-4">
+      <div class="row g-2 align-items-end">
+        <div class="col-md-4">
+          <label>Start Date</label>
+          <input type="date" id="startDate" class="form-control" />
+        </div>
+        <div class="col-md-4">
+          <label>End Date</label>
+          <input type="date" id="endDate" class="form-control" />
+        </div>
+        <div class="col-md-2">
+          <button type="submit" class="btn btn-secondary w-100">Filter</button>
+        </div>
+        <div class="col-md-2">
+          <button type="button" id="resetBtn" class="btn btn-outline-secondary w-100">Reset</button>
+        </div>
+      </div>
+    </form>
+
+    <div class="row">
+      <div class="col-md-4 stat-box">
+        <h5>Selected Period</h5>
+        <p><strong id="thisWeekHours">0</strong> / <span id="expectedHours">40</span> hrs</p>
+        <div class="progress mb-2">
+          <div id="weekProgress" class="progress-bar" role="progressbar" style="width: 0%;"></div>
+        </div>
+        <p id="weekStatus" class="text-muted small"></p>
+        <canvas id="donutChart"></canvas>
+      </div>
+
+      <div class="col-md-4 stat-box">
+        <h5>Global Stats</h5>
+        <p>Total Hours: <strong id="globalTotal">0</strong></p>
+        <p>Weeks Tracked: <strong id="weeksTracked">0</strong></p>
+        <p>Global Avg/Week: <strong id="globalAvg">0</strong></p>
+        <p>Successful Weeks: <strong id="goalWeeks">0</strong></p>
+      </div>
+
+      <div class="col-md-4 stat-box">
+        <h5>Daily Insights</h5>
+        <p>Longest Day: <strong id="maxDay">0 hrs</strong></p>
+        <p>Avg/Day: <strong id="avgDay">0</strong></p>
+      </div>
+    </div>
+
+    <div class="row mt-4">
+      <div class="col-md-6">
+        <canvas id="weeklyBarChart"></canvas>
+      </div>
+      <div class="col-md-6">
+        <canvas id="trendLineChart"></canvas>
+      </div>
     </div>
   </div>
 
   <script>
-    // Existing Firebase config and setup (kept unchanged)
     const firebaseConfig = {
       apiKey: "AIzaSyAnujd0rgEBYUVly32YOsQNBnuOYzVw8u0",
       authDomain: "work-hours-tracker-f48a6.firebaseapp.com",
@@ -22,60 +101,150 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    function loadTable() {
-      db.ref("entries").once("value", (snapshot) => {
-        const data = snapshot.val();
-        if (!data) return;
+    const entryForm = document.getElementById("entryForm");
+    const filterForm = document.getElementById("filterForm");
+    const resetBtn = document.getElementById("resetBtn");
 
-        const rows = Object.entries(data).map(([id, entry]) => [
-          entry.date,
-          entry.hours,
-          gridjs.h("button", { className: "btn btn-sm btn-warning me-2", onClick: () => editEntry(id, entry) }, "Edit"),
-          gridjs.h("button", { className: "btn btn-sm btn-danger", onClick: () => deleteEntry(id) }, "Delete")
-        ]);
+    let allEntries = [];
 
-        const grid = new gridjs.Grid({
-          columns: ["Date", "Hours", "Edit", "Delete"],
-          data: rows,
-          search: true,
-          sort: true,
-          pagination: { limit: 10 },
-          resizable: true,
-          style: { table: { width: "100%" } }
-        });
-
-        grid.render(document.getElementById("entriesTable"));
-      });
-    }
-
-    function deleteEntry(id) {
-      if (confirm("Are you sure you want to delete this entry?")) {
-        db.ref("entries/" + id).remove().then(() => location.reload());
-      }
-    }
-
-    function editEntry(id, entry) {
-      const newDate = prompt("Update date:", entry.date);
-      const newHours = prompt("Update hours:", entry.hours);
-      if (newDate && newHours !== null) {
-        db.ref("entries/" + id).update({ date: newDate, hours: parseFloat(newHours) }).then(() => location.reload());
-      }
-    }
-
-    document.getElementById("exportCsv").addEventListener("click", () => {
-      db.ref("entries").once("value", (snapshot) => {
-        const data = snapshot.val();
-        if (!data) return;
-        const csvRows = ["Date,Hours"];
-        Object.values(data).forEach(row => {
-          csvRows.push(`${row.date},${row.hours}`);
-        });
-        const blob = new Blob([csvRows.join("\n")], { type: "text/csv" });
-        saveAs(blob, "work_hours.csv");
-      });
+    entryForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const date = document.getElementById("date").value;
+      const hours = parseFloat(document.getElementById("hours").value);
+      const id = db.ref("entries").push().key;
+      db.ref("entries/" + id).set({ date, hours });
+      entryForm.reset();
     });
 
-    window.addEventListener("load", loadTable);
+    function getWeekStart(date) {
+      const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+      const day = d.getUTCDay();
+      d.setUTCDate(d.getUTCDate() - day);
+      d.setUTCHours(0, 0, 0, 0);
+      return d;
+    }
+
+    function updateSelectedPeriodStats(filtered) {
+      const totalHours = filtered.reduce((sum, e) => sum + e.hours, 0);
+      const expected = Math.max(40, Math.floor(filtered.length / 7) * 40);
+
+      document.getElementById("thisWeekHours").textContent = totalHours.toFixed(1);
+      document.getElementById("expectedHours").textContent = expected;
+
+      const percent = Math.min(100, (totalHours / expected) * 100);
+      document.getElementById("weekProgress").style.width = percent + "%";
+      let status = totalHours >= expected
+        ? "✅ Goal met!"
+        : ❌ ${Math.round(expected - totalHours)} hrs short.;
+      if (totalHours > expected) status = ➕ ${Math.round(totalHours - expected)} hrs over.;
+      document.getElementById("weekStatus").textContent = status;
+
+      if (window.donutChart instanceof Chart) window.donutChart.destroy();
+      window.donutChart = new Chart(document.getElementById("donutChart"), {
+        type: "doughnut",
+        data: {
+          labels: ["Worked", "Remaining"],
+          datasets: [{ data: [totalHours, Math.max(0, expected - totalHours)], backgroundColor: ["#0d6efd", "#dee2e6"] }]
+        },
+        options: { cutout: "75%", plugins: { legend: { display: false } } }
+      });
+
+      const dailyHours = Array(7).fill(0);
+      filtered.forEach(e => dailyHours[new Date(e.date).getDay()] += e.hours);
+      if (window.barChart instanceof Chart) window.barChart.destroy();
+      window.barChart = new Chart(document.getElementById("weeklyBarChart"), {
+        type: "bar",
+        data: { labels: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], datasets: [{ label: "Hours", data: dailyHours, backgroundColor: "#0d6efd" }] }
+      });
+    }
+
+    function updateGlobalStats(entries) {
+      const globalTotal = entries.reduce((sum, e) => sum + e.hours, 0);
+      const groupedWeeks = {};
+      entries.forEach(e => {
+        const wk = getWeekStart(new Date(e.date)).toISOString().slice(0, 10);
+        groupedWeeks[wk] = (groupedWeeks[wk] || 0) + e.hours;
+      });
+
+      const totalWeeks = Math.max(1, Object.keys(groupedWeeks).length);
+      const avgWeek = globalTotal / totalWeeks;
+      const avgDay = entries.length ? globalTotal / entries.length : 0;
+      const maxDay = Math.max(...entries.map(e => e.hours));
+      const goalWeeks = Object.values(groupedWeeks).filter(v => v >= 40).length;
+
+      document.getElementById("globalTotal").textContent = globalTotal.toFixed(1);
+      document.getElementById("weeksTracked").textContent = totalWeeks;
+      document.getElementById("globalAvg").textContent = avgWeek.toFixed(1);
+      document.getElementById("avgDay").textContent = avgDay.toFixed(1);
+      document.getElementById("maxDay").textContent = maxDay.toFixed(1);
+      document.getElementById("goalWeeks").textContent = goalWeeks;
+
+      const labels = Object.keys(groupedWeeks);
+      const values = labels.map(l => groupedWeeks[l]);
+      if (window.lineChart instanceof Chart) window.lineChart.destroy();
+      window.lineChart = new Chart(document.getElementById("trendLineChart"), {
+        type: "line",
+        data: { labels, datasets: [{ label: "Weekly Hours", data: values, borderColor: "#198754", fill: false }] },
+        options: {
+          plugins: {
+            annotation: {
+              annotations: {
+                goalLine: {
+                  type: 'line',
+                  yMin: 40,
+                  yMax: 40,
+                  borderColor: 'red',
+                  borderWidth: 2,
+                  label: {
+                    content: 'Goal (40 hrs)',
+                    enabled: true,
+                    position: 'start',
+                    backgroundColor: 'rgba(255, 99, 132, 0.8)',
+                    color: 'white',
+                    font: { style: 'bold' }
+                  }
+                }
+              }
+            }
+          },
+          scales: {
+            y: { beginAtZero: true }
+          }
+        }
+      });
+    }
+
+    db.ref("entries").on("value", snapshot => {
+      const data = snapshot.val() || {};
+      allEntries = Object.values(data).map(d => ({ ...d, date: d.date, hours: +d.hours }));
+      const currentWeek = getWeekStart(new Date()).toISOString().slice(0, 10);
+      const filtered = allEntries.filter(e => getWeekStart(new Date(e.date)).toISOString().slice(0, 10) === currentWeek);
+      updateSelectedPeriodStats(filtered);
+      updateGlobalStats(allEntries);
+    });
+
+    filterForm.addEventListener("submit", e => {
+    e.preventDefault();
+    const start = new Date(document.getElementById("startDate").value);
+    const end = new Date(document.getElementById("endDate").value);
+    if (!start || !end || start > end) return alert("Invalid range");
+  
+    const filtered = allEntries.filter(e => {
+      const date = new Date(e.date);
+      return date >= start && date <= end;
+    });
+  
+    updateSelectedPeriodStats(filtered);
+    updateGlobalStats(filtered); // 🟢 Add this line to update the trend line chart
+  });
+
+    resetBtn.addEventListener("click", () => {
+      const currentWeek = getWeekStart(new Date()).toISOString().slice(0, 10);
+      const filtered = allEntries.filter(e => getWeekStart(new Date(e.date)).toISOString().slice(0, 10) === currentWeek);
+      updateSelectedPeriodStats(filtered);
+      document.getElementById("startDate").value = "";
+      document.getElementById("endDate").value = "";
+    });
   </script>
 </body>
 </html>
