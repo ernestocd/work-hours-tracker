@@ -34,7 +34,7 @@
       margin: 0;
     }
     .calendar-maximized #calendar-heatmap {
-      height: calc(100vh - 150px); /* Adjust for buttons, pie chart, and padding */
+      height: calc(100vh - 150px);
       width: 100%;
     }
     .calendar-maximized .maximize-btn { display: none; }
@@ -50,10 +50,10 @@
       right: 10px;
     }
     .rotate-btn {
-      top: 50px; /* Stack vertically */
+      top: 50px;
       right: 10px;
     }
-    #heatmap-stats-pie {
+    #heatmap-stats-pie, #worked-vs-not-worked-chart {
       height: 200px;
       width: 100%;
       margin-top: 1rem;
@@ -66,9 +66,9 @@
         padding: 0.5rem;
       }
       .calendar-maximized #calendar-heatmap {
-        height: calc(100vh - 140px); /* Adjust for smaller buttons and pie chart */
+        height: calc(100vh - 140px);
       }
-      #heatmap-stats-pie {
+      #heatmap-stats-pie, #worked-vs-not-worked-chart {
         height: 150px;
       }
     }
@@ -158,6 +158,7 @@
         <p>Global Avg/Week: <strong id="globalAvg">0</strong></p>
         <p>Successful Weeks: <strong id="goalWeeks">0</strong></p>
         <p>Days Worked: <strong id="daysWorked">0/7</strong></p>
+        <canvas id="worked-vs-not-worked-chart"></canvas>
       </div>
 
       <div class="col-md-4 stat-box">
@@ -189,14 +190,11 @@
   </div>
 
   <script>
-    // Wait for DOM to load
     document.addEventListener("DOMContentLoaded", () => {
-      // Check if ECharts is available
       if (typeof echarts === "undefined") {
         console.error("ECharts library failed to load. Please check the CDN link or network connection.");
       }
 
-      // Firebase setup
       const firebaseConfig = {
         apiKey: "AIzaSyAnujd0rgEBYUVly32YOsQNBnuOYzVw8u0",
         authDomain: "work-hours-tracker-f48a6.firebaseapp.com",
@@ -210,14 +208,13 @@
       firebase.initializeApp(firebaseConfig);
       const db = firebase.database();
 
-      // State
       let allEntries = [];
       let filteredEntries = [];
       let calendarChart = null;
       let heatmapStatsPie = null;
+      let workedVsNotWorkedChart = null;
       let isCalendarRotated = false;
 
-      // DOM elements with null checks
       const elements = {
         entryForm: document.getElementById("entryForm"),
         filterForm: document.getElementById("filterForm"),
@@ -254,13 +251,13 @@
         maximizeCalendarBtn: document.getElementById("maximizeCalendarBtn"),
         minimizeCalendarBtn: document.getElementById("minimizeCalendarBtn"),
         rotateCalendarBtn: document.getElementById("rotateCalendarBtn"),
-        heatmapStatsPie: document.getElementById("heatmap-stats-pie")
+        heatmapStatsPie: document.getElementById("heatmap-stats-pie"),
+        workedVsNotWorkedChart: document.getElementById("worked-vs-not-worked-chart")
       };
 
-      // Utility functions
       const getWeekStart = (date) => {
         const d = new Date(date);
-        d.setDate(d.getDate() - d.getDay());
+        d.setDate(d.getDate() - ((d.getDay() + 1) % 7));
         d.setHours(0, 0, 0, 0);
         return d;
       };
@@ -275,7 +272,6 @@
         return Math.max(1, diffWeeks);
       };
 
-      // Render table
       const renderTable = (entries) => {
         if (!elements.entriesTable) return console.error("entriesTable not found");
         const sortedEntries = [...entries].sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -295,12 +291,10 @@
           ${rows}
         `;
 
-        // Re-query inputs after DOM update
         const newDateInput = document.getElementById("newDate");
         const newHoursInput = document.getElementById("newHours");
         const addBtn = document.getElementById("addBtn");
 
-        // Attach listeners to table
         document.querySelectorAll(".date-field, .hours-field").forEach(input => {
           input.addEventListener("change", async (e) => {
             const row = e.target.closest("tr");
@@ -354,7 +348,6 @@
         }
       };
 
-      // Update selected period stats
       const updateSelectedPeriodStats = (entries, startDate = null, endDate = null) => {
         const totalHours = entries.reduce((sum, e) => sum + e.hours, 0);
         let weeksInPeriod = 1;
@@ -406,7 +399,6 @@
         });
       };
 
-      // Update global stats
       const updateGlobalStats = (entries, startDate = null, endDate = null) => {
         const globalTotal = entries.reduce((sum, e) => sum + e.hours, 0);
         const weeks = {};
@@ -434,6 +426,33 @@
         elements.maxDay.textContent = maxDay.toFixed(1);
         elements.goalWeeks.textContent = goalWeeks;
         elements.daysWorked.textContent = `${daysWorked}/${totalPossibleDays}`;
+
+        // Calculate Worked vs Not Worked for the new chart
+        const daysNotWorked = entries.filter(e => e.hours === 0).length;
+        const daysWorkedCount = daysWorked; // Already calculated as uniqueDays.size
+
+        if (window.workedVsNotWorkedChart instanceof Chart) window.workedVsNotWorkedChart.destroy();
+        window.workedVsNotWorkedChart = new Chart(elements.workedVsNotWorkedChart, {
+          type: "doughnut",
+          data: {
+            labels: ["Worked Days", "Not Worked Days"],
+            datasets: [{
+              data: [daysWorkedCount, daysNotWorked],
+              backgroundColor: ["#28a745", "#ff0000"]
+            }]
+          },
+          options: {
+            cutout: "75%",
+            plugins: {
+              legend: { position: "bottom" },
+              title: {
+                display: true,
+                text: "Worked vs Not Worked Days",
+                padding: { top: 10, bottom: 10 }
+              }
+            }
+          }
+        });
 
         const labels = Object.keys(weeks).sort();
         const data = labels.map(label => weeks[label]);
@@ -471,7 +490,6 @@
         });
       };
 
-      // Render calendar heatmap using ECharts
       const renderCalendarHeatmap = (entries) => {
         if (!elements.calendarHeatmap) return console.error("calendarHeatmap not found");
         if (typeof echarts === "undefined") {
@@ -485,26 +503,21 @@
           return;
         }
 
-        // Initialize ECharts instance
         if (calendarChart) calendarChart.dispose();
         calendarChart = echarts.init(elements.calendarHeatmap);
 
-        // Prepare data for ECharts
         const data = entries.map(entry => {
           const date = new Date(entry.date);
           return [entry.date, entry.hours];
         });
 
-        // Calculate the maximum hours value for dynamic scaling
         const maxHours = entries.length > 0 ? Math.max(...entries.map(entry => entry.hours)) : 10;
-        const maxValue = Math.ceil(maxHours); // Round up to the nearest integer
+        const maxValue = Math.ceil(maxHours);
 
-        // Calculate the date range (last 6 months)
         const endDate = new Date();
         const startDate = new Date();
         startDate.setMonth(startDate.getMonth() - 6);
 
-        // Define custom break points for the visualMap
         const pieces = [
           { value: 0, label: '0 hrs (No Work)', color: '#ff0000' },
           { min: 0, max: 2, label: '0-2 hrs', color: '#e6f3ff' },
@@ -514,12 +527,10 @@
           { min: 8, label: '8+ hrs', color: '#004085' }
         ];
 
-        // Adjust cell size and layout based on orientation and screen size
         const isMaximized = elements.calendarContainer.classList.contains("calendar-maximized");
         const cellHeight = isMaximized ? (window.innerWidth <= 576 ? 20 : 30) : (window.innerWidth <= 576 ? 16 : 20);
         const cellWidth = isMaximized ? (window.innerWidth <= 576 ? 20 : 30) : 'auto';
 
-        // ECharts calendar heatmap configuration
         const option = {
           tooltip: {
             position: 'top',
@@ -533,34 +544,24 @@
             orient: isCalendarRotated ? 'vertical' : 'horizontal',
             left: isCalendarRotated ? 'right' : 'center',
             top: isCalendarRotated ? 'center' : 0,
-            textStyle: {
-              color: '#000'
-            },
+            textStyle: { color: '#000' },
             calculable: true
           },
           calendar: {
             range: [startDate, endDate],
             cellSize: isCalendarRotated ? [cellHeight, 'auto'] : ['auto', cellHeight],
             orient: isCalendarRotated ? 'vertical' : 'horizontal',
-            itemStyle: {
-              borderColor: '#fff'
-            },
+            itemStyle: { borderColor: '#fff' },
             splitLine: {
               show: true,
-              lineStyle: {
-                color: '#000',
-                width: 1,
-                type: 'solid'
-              }
+              lineStyle: { color: '#000', width: 1, type: 'solid' }
             }
           },
           series: [{
             type: 'heatmap',
             coordinateSystem: 'calendar',
             data: data,
-            label: {
-              show: false
-            }
+            label: { show: false }
           }]
         };
 
@@ -575,7 +576,6 @@
           `;
         }
 
-        // Calculate statistics for the pie chart
         const stats = {
           zero: 0,
           zeroToTwo: 0,
@@ -595,7 +595,6 @@
           else if (hours > 8) stats.eightPlus++;
         });
 
-        // Render pie chart
         if (heatmapStatsPie instanceof Chart) heatmapStatsPie.destroy();
         heatmapStatsPie = new Chart(elements.heatmapStatsPie, {
           type: 'pie',
@@ -622,26 +621,17 @@
           },
           options: {
             plugins: {
-              legend: {
-                position: 'bottom',
-                labels: {
-                  boxWidth: 12
-                }
-              },
+              legend: { position: 'bottom', labels: { boxWidth: 12 } },
               title: {
                 display: true,
                 text: 'Heatmap Statistics (Days)',
-                padding: {
-                  top: 10,
-                  bottom: 10
-                }
+                padding: { top: 10, bottom: 10 }
               }
             }
           }
         });
       };
 
-      // Update UI with entries
       const updateUI = (entries) => {
         filteredEntries = entries;
         renderTable(entries);
@@ -650,7 +640,6 @@
         renderCalendarHeatmap(entries);
       };
 
-      // Maximize/minimize calendar
       if (elements.maximizeCalendarBtn) {
         elements.maximizeCalendarBtn.addEventListener("click", () => {
           elements.calendarContainer.classList.add("calendar-maximized");
@@ -675,11 +664,9 @@
         });
       }
 
-      // Rotate calendar
       if (elements.rotateCalendarBtn) {
         elements.rotateCalendarBtn.addEventListener("click", () => {
           isCalendarRotated = !isCalendarRotated;
-          // Ensure the calendar is maximized when rotated
           if (!elements.calendarContainer.classList.contains("calendar-maximized")) {
             elements.calendarContainer.classList.add("calendar-maximized");
           }
@@ -693,18 +680,19 @@
         });
       }
 
-      // Resize handler for responsiveness
       window.addEventListener("resize", () => {
         if (calendarChart) {
-          renderCalendarHeatmap(filteredEntries); // Re-render to adjust cell sizes
+          renderCalendarHeatmap(filteredEntries);
           calendarChart.resize();
         }
         if (heatmapStatsPie) {
           heatmapStatsPie.resize();
         }
+        if (workedVsNotWorkedChart) {
+          workedVsNotWorkedChart.resize();
+        }
       });
 
-      // Event listeners
       if (elements.entryForm) {
         elements.entryForm.addEventListener("submit", async (e) => {
           e.preventDefault();
@@ -828,7 +816,6 @@
         });
       }
 
-      // Firebase listener
       db.ref("entries").on("value", (snapshot) => {
         try {
           const data = snapshot.val() || {};
