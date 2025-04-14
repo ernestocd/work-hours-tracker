@@ -138,6 +138,11 @@
   </div>
 
   <script>
+    // Ensure CalHeatmap is loaded
+    if (typeof CalHeatmap === "undefined") {
+      console.error("CalHeatmap library failed to load. Please check the CDN link or network connection.");
+    }
+
     // Wait for DOM to load
     document.addEventListener("DOMContentLoaded", () => {
       // Firebase setup
@@ -217,7 +222,7 @@
         const sortedEntries = [...entries].sort((a, b) => new Date(b.date) - new Date(a.date));
         const rows = sortedEntries.map(entry => `
           <tr data-id="${entry.id}">
-            <td><input type="date " class="form-control editable date-field" value="${entry.date}" aria-label="Edit Date" /></td>
+            <td><input type="date" class="form-control editable date-field" value="${entry.date}" aria-label="Edit Date" /></td>
             <td><input type="number" class="form-control editable hours-field" value="${entry.hours}" step="0.1" min="0" aria-label="Edit Hours" /></td>
             <td><button class="btn btn-danger btn-sm delete-btn">🗑️ Delete</button></td>
           </tr>
@@ -396,7 +401,7 @@
                       position: "start",
                       backgroundColor: "rgba(255, 99, 132, 0.8)",
                       color: "white",
-                      font: { style: "bold" }
+                      font: { weight: "bold" } // Fixed: Changed style to weight
                     }
                   }
                 }
@@ -410,6 +415,12 @@
       // Render calendar heatmap
       const renderCalendarHeatmap = (entries) => {
         if (!elements.calendarHeatmap) return console.error("calendarHeatmap not found");
+        if (typeof CalHeatmap === "undefined") {
+          console.error("CalHeatmap is not available. Skipping heatmap rendering.");
+          elements.calendarHeatmap.innerHTML = "<p>Unable to load calendar heatmap. Please check your internet connection.</p>";
+          return;
+        }
+
         elements.calendarHeatmap.innerHTML = "";
 
         const data = {};
@@ -420,22 +431,27 @@
           data[timestamp] = (data[timestamp] || 0) + e.hours;
         });
 
-        const cal = new CalHeatmap();
-        cal.paint({
-          itemSelector: "#calendar-heatmap",
-          domain: { type: "month" },
-          subDomain: { type: "day" },
-          range: 6,
-          data: {
-            source: data,
-            type: "json",
-            x: d => +d,
-            y: d => data[+d] || 0
-          },
-          date: { start: new Date() },
-          scale: { color: { type: "linear", range: ["#e6f3ff", "#004085"], domain: [0, 10] } },
-          legend: { show: true, itemSelector: "#calendar-heatmap-legend", label: "Hours" }
-        });
+        try {
+          const cal = new CalHeatmap();
+          cal.paint({
+            itemSelector: "#calendar-heatmap",
+            domain: { type: "month" },
+            subDomain: { type: "day" },
+            range: 6,
+            data: {
+              source: data,
+              type: "json",
+              x: d => +d,
+              y: d => data[+d] || 0
+            },
+            date: { start: new Date() },
+            scale: { color: { type: "linear", range: ["#e6f3ff", "#004085"], domain: [0, 10] } },
+            legend: { show: true, itemSelector: "#calendar-heatmap-legend", label: "Hours" }
+          });
+        } catch (error) {
+          console.error("Error rendering CalHeatmap:", error);
+          elements.calendarHeatmap.innerHTML = "<p>Error rendering calendar heatmap.</p>";
+        }
       };
 
       // Update UI with entries
