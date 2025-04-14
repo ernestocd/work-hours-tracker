@@ -267,12 +267,12 @@
     }
 
     function countWeeksInRange(startDate, endDate) {
-      const start = getWeekStart(new Date(startDate));
-      const end = new Date(endDate);
-      const diffTime = end - start;
-      const diffWeeks = Math.ceil(diffTime / (7 * 24 * 60 * 60 * 1000));
-      return Math.max(1, diffWeeks);
-    }
+    const start = getWeekStart(new Date(startDate));
+    const end = getWeekStart(new Date(endDate));
+    const diffTime = end - start;
+    const diffWeeks = diffTime / (7 * 24 * 60 * 60 * 1000);
+    return Math.max(1, Math.round(diffWeeks) + 1);
+  }
 
     currentWeekBtn.addEventListener("click", () => {
       const today = new Date();
