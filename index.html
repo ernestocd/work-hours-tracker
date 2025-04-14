@@ -266,6 +266,14 @@
       return date.toISOString().split("T")[0];
     }
 
+    function countWeeksInRange(startDate, endDate) {
+      const start = getWeekStart(new Date(startDate));
+      const end = getWeekStart(new Date(endDate));
+      const diffTime = end - start;
+      const diffWeeks = Math.floor(diffTime / (7 * 24 * 60 * 60 * 1000)) + 1;
+      return Math.max(1, diffWeeks);
+    }
+
     currentWeekBtn.addEventListener("click", () => {
       const today = new Date();
       const weekStart = getWeekStart(today);
@@ -283,7 +291,7 @@
 
       renderTable(filtered);
       updateSelectedPeriodStats(filtered);
-      updateGlobalStats(filtered);
+      updateGlobalStats(filtered, weekStart, weekEnd);
     });
 
     prevWeekBtn.addEventListener("click", () => {
@@ -305,7 +313,7 @@
 
       renderTable(filtered);
       updateSelectedPeriodStats(filtered);
-      updateGlobalStats(filtered);
+      updateGlobalStats(filtered, prevWeekStart, prevWeekEnd);
     });
 
     function updateSelectedPeriodStats(filtered) {
@@ -353,7 +361,7 @@
       });
     }
 
-    function updateGlobalStats(entries) {
+    function updateGlobalStats(entries, startDate, endDate) {
       const globalTotal = entries.reduce((sum, e) => sum + e.hours, 0);
       const groupedWeeks = {};
       entries.forEach(e => {
@@ -361,8 +369,14 @@
         groupedWeeks[wk] = (groupedWeeks[wk] || 0) + e.hours;
       });
 
-      const totalWeeks = Math.max(1, Object.keys(groupedWeeks).length);
-      const avgWeek = globalTotal / totalWeeks;
+      let totalWeeks;
+      if (startDate && endDate) {
+        totalWeeks = countWeeksInRange(startDate, endDate);
+      } else {
+        totalWeeks = Object.keys(groupedWeeks).length || 1;
+      }
+
+      const avgWeek = totalWeeks > 0 ? globalTotal / totalWeeks : 0;
       const avgDay = entries.length ? globalTotal / entries.length : 0;
       const maxDay = entries.length ? Math.max(...entries.map(e => e.hours)) : 0;
       const goalWeeks = Object.values(groupedWeeks).filter(v => v >= 40).length;
@@ -444,7 +458,7 @@
 
       renderTable(filtered);
       updateSelectedPeriodStats(filtered);
-      updateGlobalStats(filtered);
+      updateGlobalStats(filtered, start, end);
     });
 
     resetBtn.addEventListener("click", () => {
