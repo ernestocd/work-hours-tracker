@@ -34,7 +34,7 @@
       margin: 0;
     }
     .calendar-maximized #calendar-heatmap {
-      height: calc(100vh - 100px); /* Adjust for buttons and padding */
+      height: calc(100vh - 150px); /* Adjust for buttons, pie chart, and padding */
       width: 100%;
     }
     .calendar-maximized .maximize-btn { display: none; }
@@ -50,8 +50,13 @@
       right: 10px;
     }
     .rotate-btn {
-      top: 10px;
-      right: 80px; /* Increased spacing to avoid overlap */
+      top: 50px; /* Stack vertically */
+      right: 10px;
+    }
+    #heatmap-stats-pie {
+      height: 200px;
+      width: 100%;
+      margin-top: 1rem;
     }
     @media (max-width: 576px) {
       body { padding: 1rem; }
@@ -61,10 +66,10 @@
         padding: 0.5rem;
       }
       .calendar-maximized #calendar-heatmap {
-        height: calc(100vh - 90px); /* Adjust for smaller buttons */
+        height: calc(100vh - 140px); /* Adjust for smaller buttons and pie chart */
       }
-      .rotate-btn {
-        right: 60px; /* Adjust spacing for smaller screens */
+      #heatmap-stats-pie {
+        height: 150px;
       }
     }
   </style>
@@ -178,6 +183,7 @@
         <button class="btn btn-outline-secondary btn-sm minimize-btn" id="minimizeCalendarBtn">Minimize</button>
         <button class="btn btn-outline-secondary btn-sm rotate-btn" id="rotateCalendarBtn">Rotate</button>
         <div id="calendar-heatmap"></div>
+        <canvas id="heatmap-stats-pie"></canvas>
       </div>
     </div>
   </div>
@@ -208,6 +214,7 @@
       let allEntries = [];
       let filteredEntries = [];
       let calendarChart = null;
+      let heatmapStatsPie = null;
       let isCalendarRotated = false;
 
       // DOM elements with null checks
@@ -246,7 +253,8 @@
         calendarContainer: document.getElementById("calendarContainer"),
         maximizeCalendarBtn: document.getElementById("maximizeCalendarBtn"),
         minimizeCalendarBtn: document.getElementById("minimizeCalendarBtn"),
-        rotateCalendarBtn: document.getElementById("rotateCalendarBtn")
+        rotateCalendarBtn: document.getElementById("rotateCalendarBtn"),
+        heatmapStatsPie: document.getElementById("heatmap-stats-pie")
       };
 
       // Utility functions
@@ -498,8 +506,8 @@
 
         // Define custom break points for the visualMap
         const pieces = [
-          { value: 0, label: '0 hrs (No Work)', color: '#ff0000' }, // Red for 0 hours
-          { min: 0, max: 2, label: '0-2 hrs', color: '#e6f3ff' }, // Excludes 0 due to the previous rule
+          { value: 0, label: '0 hrs (No Work)', color: '#ff0000' },
+          { min: 0, max: 2, label: '0-2 hrs', color: '#e6f3ff' },
           { min: 2, max: 4, label: '2-4 hrs', color: '#b3d9ff' },
           { min: 4, max: 6, label: '4-6 hrs', color: '#80bfff' },
           { min: 6, max: 8, label: '6-8 hrs', color: '#4d94ff' },
@@ -566,6 +574,71 @@
             </p>
           `;
         }
+
+        // Calculate statistics for the pie chart
+        const stats = {
+          zero: 0,
+          zeroToTwo: 0,
+          twoToFour: 0,
+          fourToSix: 0,
+          sixToEight: 0,
+          eightPlus: 0
+        };
+
+        entries.forEach(entry => {
+          const hours = entry.hours;
+          if (hours === 0) stats.zero++;
+          else if (hours > 0 && hours <= 2) stats.zeroToTwo++;
+          else if (hours > 2 && hours <= 4) stats.twoToFour++;
+          else if (hours > 4 && hours <= 6) stats.fourToSix++;
+          else if (hours > 6 && hours <= 8) stats.sixToEight++;
+          else if (hours > 8) stats.eightPlus++;
+        });
+
+        // Render pie chart
+        if (heatmapStatsPie instanceof Chart) heatmapStatsPie.destroy();
+        heatmapStatsPie = new Chart(elements.heatmapStatsPie, {
+          type: 'pie',
+          data: {
+            labels: ['0 hrs (No Work)', '0-2 hrs', '2-4 hrs', '4-6 hrs', '6-8 hrs', '8+ hrs'],
+            datasets: [{
+              data: [
+                stats.zero,
+                stats.zeroToTwo,
+                stats.twoToFour,
+                stats.fourToSix,
+                stats.sixToEight,
+                stats.eightPlus
+              ],
+              backgroundColor: [
+                '#ff0000',
+                '#e6f3ff',
+                '#b3d9ff',
+                '#80bfff',
+                '#4d94ff',
+                '#004085'
+              ]
+            }]
+          },
+          options: {
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: {
+                  boxWidth: 12
+                }
+              },
+              title: {
+                display: true,
+                text: 'Heatmap Statistics (Days)',
+                padding: {
+                  top: 10,
+                  bottom: 10
+                }
+              }
+            }
+          }
+        });
       };
 
       // Update UI with entries
@@ -584,6 +657,9 @@
           if (calendarChart) {
             setTimeout(() => calendarChart.resize(), 100);
           }
+          if (heatmapStatsPie) {
+            setTimeout(() => heatmapStatsPie.resize(), 100);
+          }
         });
       }
 
@@ -592,6 +668,9 @@
           elements.calendarContainer.classList.remove("calendar-maximized");
           if (calendarChart) {
             setTimeout(() => calendarChart.resize(), 100);
+          }
+          if (heatmapStatsPie) {
+            setTimeout(() => heatmapStatsPie.resize(), 100);
           }
         });
       }
@@ -608,6 +687,9 @@
           if (calendarChart) {
             setTimeout(() => calendarChart.resize(), 100);
           }
+          if (heatmapStatsPie) {
+            setTimeout(() => heatmapStatsPie.resize(), 100);
+          }
         });
       }
 
@@ -616,6 +698,9 @@
         if (calendarChart) {
           renderCalendarHeatmap(filteredEntries); // Re-render to adjust cell sizes
           calendarChart.resize();
+        }
+        if (heatmapStatsPie) {
+          heatmapStatsPie.resize();
         }
       });
 
