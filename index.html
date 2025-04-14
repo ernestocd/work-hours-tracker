@@ -19,49 +19,10 @@
     @keyframes highlight { 0% { background-color: #d4edda; } 100% { background-color: transparent; } }
     .editable:hover { background-color: #f1f1f1; cursor: pointer; }
     .btn-sm { padding: 0.25rem 0.5rem; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <h1 class="mb-4">📊 Work Hours Tracker</h1>
-
-    <form id="entryForm" class="mb-4">
-      <div class="row g-2">
-        <div class="col-md-4">
-          <input type="date" id="date" class="form-control" required aria-label="Date" />
-        </div>
-        <div class="col-md-4">
-          <input type="number" id="hours" class="form-control" placeholder="Hours Worked Apollo for the current week and one for the previous week. The buttons should update all widgets (table, charts, stats) as expected.
-
-To implement this, we need to:
-1. Add two buttons to the filter form
-2. Create event handlers to calculate the correct date ranges
-3. Update the filter inputs and trigger the existing filter logic
-
-Here's the corrected and complete code:
-
-```html
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Work Hours Tracker</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.4.0"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <style>
-    body { padding: 2rem; background: #f8f9fa; }
-    .stat-box { border-radius: 12px; background: white; box-shadow: 0 0 10px rgba(0,0,0,0.05); padding: 1rem; margin-bottom: 1rem; }
-    .table-container { max-height: 300px; overflow-y: auto; margin-bottom: 2rem; }
-    .table th, .table td { vertical-align: middle; }
-    .highlight { animation: highlight 1s ease-out; }
-    @keyframes highlight { 0% { background-color: #d4edda; } 100% { background-color: transparent; } }
-    .editable:hover { background-color: #f1f1f1; cursor: pointer; }
-    .btn-sm { padding: 0.25rem 0.5rem; }
+    @media (max-width: 576px) {
+      body { padding: 1rem; }
+      .btn-sm { font-size: 0.75rem; }
+    }
   </style>
 </head>
 <body>
@@ -186,9 +147,6 @@ Here's the corrected and complete code:
     const currentWeekBtn = document.getElementById("currentWeekBtn");
     const prevWeekBtn = document.getElementById("prevWeekBtn");
     const entriesTable = document.getElementById("entriesTable");
-    const addBtn = document.getElementById("addBtn");
-    const newDate = document.getElementById("newDate");
-    const newHours = document.getElementById("newHours");
     const exportCsvBtn = document.getElementById("exportCsvBtn");
     const exportExcelBtn = document.getElementById("exportExcelBtn");
 
@@ -246,22 +204,23 @@ Here's the corrected and complete code:
           }
         });
       });
-    }
 
-    addBtn.addEventListener("click", async () => {
-      const date = newDate.value;
-      const hours = parseFloat(newHours.value);
-      if (date && hours >= 0) {
-        try {
-          await db.ref("entries").push({ date, hours });
-          newDate.value = "";
-          newHours.value = "";
-        } catch (error) {
-          console.error("Error adding entry:", error);
-          document.getElementById("weekStatus").textContent = "Error adding entry";
+      const addBtn = document.getElementById("addBtn");
+      addBtn.addEventListener("click", async () => {
+        const date = document.getElementById("newDate").value;
+        const hours = parseFloat(document.getElementById("newHours").value);
+        if (date && hours >= 0) {
+          try {
+            await db.ref("entries").push({ date, hours });
+            document.getElementById("newDate").value = "";
+            document.getElementById("newHours").value = "";
+          } catch (error) {
+            console.error("Error adding entry:", error);
+            document.getElementById("weekStatus").textContent = "Error adding entry";
+          }
         }
-      }
-    });
+      });
+    }
 
     exportCsvBtn.addEventListener("click", () => {
       const csv = ["Date,Hours"];
@@ -307,48 +266,47 @@ Here's the corrected and complete code:
       return date.toISOString().split("T")[0];
     }
 
-    if (currentWeekBtn) {
-      currentWeekBtn.addEventListener("click", () => {
-        const today = new Date();
-        const weekStart = getWeekStart(today);
-        const weekEnd = new Date(today);
-        weekEnd.setHours(23, 59, 59, 999);
+    currentWeekBtn.addEventListener("click", () => {
+      const today = new Date();
+      const weekStart = getWeekStart(today);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6);
+      weekEnd.setHours(23, 59, 59, 999);
 
-        document.getElementById("startDate").value = formatDateForInput(weekStart);
-        document.getElementById("endDate").value = formatDateForInput(weekEnd);
+      document.getElementById("startDate").value = formatDateForInput(weekStart);
+      document.getElementById("endDate").value = formatDateForInput(weekEnd);
 
-        const filtered = allEntries.filter(e => {
-          const date = new Date(e.date);
-          return date >= weekStart && date <= weekEnd;
-        });
-
-        updateSelectedPeriodStats(filtered);
-        updateGlobalStats(filtered);
+      const filtered = allEntries.filter(e => {
+        const date = new Date(e.date);
+        return date >= weekStart && date <= weekEnd;
       });
-    }
 
-    if (prevWeekBtn) {
-      prevWeekBtn.addEventListener("click", () => {
-        const today = new Date();
-        const weekStart = getWeekStart(today);
-        const prevWeekStart = new Date(weekStart);
-        prevWeekStart.setDate(prevWeekStart.getDate() - 7);
-        const prevWeekEnd = new Date(prevWeekStart);
-        prevWeekEnd.setDate(prevWeekEnd.getDate() + 6);
-        prevWeekEnd.setHours(23, 59, 59, 999);
+      renderTable(filtered);
+      updateSelectedPeriodStats(filtered);
+      updateGlobalStats(filtered);
+    });
 
-        document.getElementById("startDate").value = formatDateForInput(prevWeekStart);
-        document.getElementById("endDate").value = formatDateForInput(prevWeekEnd);
+    prevWeekBtn.addEventListener("click", () => {
+      const today = new Date();
+      const weekStart = getWeekStart(today);
+      const prevWeekStart = new Date(weekStart);
+      prevWeekStart.setDate(prevWeekStart.getDate() - 7);
+      const prevWeekEnd = new Date(prevWeekStart);
+      prevWeekEnd.setDate(prevWeekEnd.getDate() + 6);
+      prevWeekEnd.setHours(23, 59, 59, 999);
 
-        const filtered = allEntries.filter(e => {
-          const date = new Date(e.date);
-          return date >= prevWeekStart && date <= prevWeekEnd;
-        });
+      document.getElementById("startDate").value = formatDateForInput(prevWeekStart);
+      document.getElementById("endDate").value = formatDateForInput(prevWeekEnd);
 
-        updateSelectedPeriodStats(filtered);
-        updateGlobalStats(filtered);
+      const filtered = allEntries.filter(e => {
+        const date = new Date(e.date);
+        return date >= prevWeekStart && date <= prevWeekEnd;
       });
-    }
+
+      renderTable(filtered);
+      updateSelectedPeriodStats(filtered);
+      updateGlobalStats(filtered);
+    });
 
     function updateSelectedPeriodStats(filtered) {
       const totalHours = filtered.reduce((sum, e) => sum + e.hours, 0);
@@ -484,6 +442,7 @@ Here's the corrected and complete code:
         return date >= start && date <= end;
       });
 
+      renderTable(filtered);
       updateSelectedPeriodStats(filtered);
       updateGlobalStats(filtered);
     });
@@ -491,12 +450,8 @@ Here's the corrected and complete code:
     resetBtn.addEventListener("click", () => {
       document.getElementById("startDate").value = "";
       document.getElementById("endDate").value = "";
-      const currentWeek = getWeekStart(new Date());
-      const filtered = allEntries.filter(e => {
-        const date = new Date(e.date);
-        return date >= currentWeek && date <= new Date();
-      });
-      updateSelectedPeriodStats(filtered);
+      renderTable(allEntries);
+      updateSelectedPeriodStats(allEntries);
       updateGlobalStats(allEntries);
     });
   </script>
