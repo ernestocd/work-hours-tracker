@@ -10,7 +10,6 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <!-- Add ECharts for the calendar heatmap -->
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
   <style>
     body { padding: 2rem; background: #f8f9fa; }
@@ -400,7 +399,7 @@
                     label: {
                       content: "Goal (40 hrs)",
                       enabled: true,
-                      position: "start",
+                      position: " start",
                       backgroundColor: "rgba(255, 99, 132, 0.8)",
                       color: "white",
                       font: { weight: "bold" }
@@ -418,7 +417,7 @@
       const renderCalendarHeatmap = (entries) => {
         if (!elements.calendarHeatmap) return console.error("calendarHeatmap not found");
         if (typeof echarts === "undefined") {
-          console.error("ECharts is not available. Skipping heatmap rendering.");
+          console.error("ECharts is not available.Gen heatmap rendering.");
           elements.calendarHeatmap.innerHTML = `
             <p class="text-muted">
               Unable to load calendar heatmap. This feature requires an internet connection to load the ECharts library.
@@ -437,10 +436,23 @@
           return [entry.date, entry.hours];
         });
 
+        // Calculate the maximum hours value for dynamic scaling
+        const maxHours = entries.length > 0 ? Math.max(...entries.map(entry => entry.hours)) : 10;
+        const maxValue = Math.ceil(maxHours); // Round up to the nearest integer
+
         // Calculate the date range (last 6 months)
         const endDate = new Date();
         const startDate = new Date();
         startDate.setMonth(startDate.getMonth() - 6);
+
+        // Define custom break points for the visualMap
+        const pieces = [
+          { min: 0, max: 2, label: '0-2 hrs', color: '#e6f3ff' },
+          { min: 2, max: 4, label: '2-4 hrs', color: '#b3d9ff' },
+          { min: 4, max: 6, label: '4-6 hrs', color: '#80bfff' },
+          { min: 6, max: 8, label: '6-8 hrs', color: '#4d94ff' },
+          { min: 8, label: '8+ hrs', color: '#004085' }
+        ];
 
         // ECharts calendar heatmap configuration
         const option = {
@@ -451,16 +463,14 @@
             }
           },
           visualMap: {
-            min: 0,
-            max: 10,
             type: 'piecewise',
+            pieces: pieces,
             orient: 'horizontal',
             left: 'center',
             top: 0,
-            inRange: {
-              color: ['#e6f3ff', '#004085'] // Same color range as CalHeatmap
+            textStyle: {
+              color: '#000'
             },
-            text: ['High', 'Low'],
             calculable: true
           },
           calendar: {
