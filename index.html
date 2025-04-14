@@ -21,6 +21,39 @@
   <div class="container">
     <h1 class="mb-4">📊 Work Hours Tracker</h1>
 
+    <form id="entryForm" class="mb-4">
+      <div class="row g-2">
+        <div class="col-md-4">
+          <input type="date" id="date" class="form-control" required />
+        </div>
+        <div class="col-md-4">
+          <input type="number" id="hours" class="form-control" placeholder="Hours Worked" step="0.1" min="0" required />
+        </div>
+        <div class="col-md-4">
+          <button type="submit" class="btn btn-primary w-100">Add Entry</button>
+        </div>
+      </div>
+    </form>
+
+    <form id="filterForm" class="mb-4">
+      <div class="row g-2 align-items-end">
+        <div class="col-md-4">
+          <label>Start Date</label>
+          <input type="date" id="startDate" class="form-control" />
+        </div>
+        <div class="col-md-4">
+          <label>End Date</label>
+          <input type="date" id="endDate" class="form-control" />
+        </div>
+        <div class="col-md-2">
+          <button type="submit" class="btn btn-secondary w-100">Filter</button>
+        </div>
+        <div class="col-md-2">
+          <button type="button" id="resetBtn" class="btn btn-outline-secondary w-100">Reset</button>
+        </div>
+      </div>
+    </form>
+
     <div class="row">
       <div class="col-md-4 stat-box">
         <h5>Selected Period</h5>
