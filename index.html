@@ -9,9 +9,16 @@
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.4.0"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
     body { padding: 2rem; background: #f8f9fa; }
     .stat-box { border-radius: 12px; background: white; box-shadow: 0 0 10px rgba(0,0,0,0.05); padding: 1rem; margin-bottom: 1rem; }
+    .table-container { max-height: 300px; overflow-y: auto; margin-bottom: 2rem; }
+    .table th, .table td { vertical-align: middle; }
+    .highlight { animation: highlight 1s ease-out; }
+    @keyframes highlight { 0% { background-color: #d4edda; } 100% { background-color: transparent; } }
+    .editable:hover { background-color: #f1f1f1; cursor: pointer; }
+    .btn-sm { padding: 0.25rem 0.5rem; }
   </style>
 </head>
 <body>
@@ -50,6 +57,29 @@
         </div>
       </div>
     </form>
+
+    <div class="table-container">
+      <table class="table table-bordered table-hover">
+        <thead class="table-light">
+          <tr>
+            <th>Date</th>
+            <th>Hours</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="entriesTable">
+          <tr id="addRow">
+            <td><input type="date" id="newDate" class="form-control" aria-label="New Date" /></td>
+            <td><input type="number" id="newHours" class="form-control" step="0.1" min="0" placeholder="Hours" aria-label="New Hours" /></td>
+            <td><button id="addBtn" class="btn btn-success btn-sm">Add New</button></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="mb-3">
+        <button id="exportCsvBtn" class="btn btn-outline-primary btn-sm me-2">Export to CSV</button>
+        <button id="exportExcelBtn" class="btn btn-outline-primary btn-sm">Export to Excel</button>
+      </div>
+    </div>
 
     <div class="row">
       <div class="col-md-4 stat-box">
@@ -104,8 +134,99 @@
     const entryForm = document.getElementById("entryForm");
     const filterForm = document.getElementById("filterForm");
     const resetBtn = document.getElementById("resetBtn");
+    const entriesTable = document.getElementById("entriesTable");
+    const addBtn = document.getElementById("addBtn");
+    const newDate = document.getElementById("newDate");
+    const newHours = document.getElementById("newHours");
+    const exportCsvBtn = document.getElementById("exportCsvBtn");
+    const exportExcelBtn = document.getElementById("exportExcelBtn");
 
     let allEntries = [];
+
+    function renderTable(entries) {
+      const sortedEntries = [...entries].sort((a, b) => new Date(b.date) - new Date(a.date));
+      const rows = sortedEntries.map(entry => `
+        <tr data-id="${entry.id}">
+          <td><input type="date" class="form-control editable date-field" value="${entry.date}" aria-label="Edit Date" /></td>
+          <td><input type="number" class="form-control editable hours-field" value="${entry.hours}" step="0.1" min="0" aria-label="Edit Hours" /></td>
+          <td><button class="btn btn-danger btn-sm delete-btn">🗑️ Delete</button></td>
+        </tr>
+      `).join("");
+      entriesTable.innerHTML = `
+        <tr id="addRow">
+          <td><input type="date" id="newDate" class="form-control" aria-label="New Date" /></td>
+          <td><input type="number" id="newHours" class="form-control" step="0.1" min="0" placeholder="Hours" aria-label="New Hours" /></td>
+          <td><button id="addBtn" class="btn btn-success btn-sm">Add New</button></td>
+        </tr>
+        ${rows}
+      `;
+      attachTableListeners();
+    }
+
+    function attachTableListeners() {
+      document.querySelectorAll(".date-field, .hours-field").forEach(input => {
+        input.addEventListener("change", async (e) => {
+          const row = e.target.closest("tr");
+          const id = row.dataset.id;
+          const date = row.querySelector(".date-field").value;
+          const hours = parseFloat(row.querySelector(".hours-field").value);
+          if (date && hours >= 0) {
+            try {
+              await db.ref(`entries/${id}`).update({ date, hours });
+              row.classList.add("highlight");
+              setTimeout(() => row.classList.remove("highlight"), 1000);
+            } catch (error) {
+              document.getElementById("weekStatus").textContent = "Error updating entry";
+            }
+          }
+        });
+      });
+
+      document.querySelectorAll(".delete-btn").forEach(btn => {
+        btn.addEventListener("click", async (e) => {
+          if (!confirm("Are you sure you want to delete this entry?")) return;
+          const id = e.target.closest("tr").dataset.id;
+          try {
+            await db.ref(`entries/${id}`).remove();
+          } catch (error) {
+            document.getElementById("weekStatus").textContent = "Error deleting entry";
+          }
+        });
+      });
+    }
+
+    addBtn.addEventListener("click", async () => {
+      const date = newDate.value;
+      const hours = parseFloat(newHours.value);
+      if (date && hours >= 0) {
+        try {
+          await db.ref("entries").push({ date, hours });
+          newDate.value = "";
+          newHours.value = "";
+        } catch (error) {
+          document.getElementById("weekStatus").textContent = "Error adding entry";
+        }
+      }
+    });
+
+    exportCsvBtn.addEventListener("click", () => {
+      const csv = ["Date,Hours"];
+      allEntries.forEach(entry => csv.push(`${entry.date},${entry.hours}`));
+      const blob = new Blob([csv.join("\n")], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "work_hours.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    exportExcelBtn.addEventListener("click", () => {
+      const ws = XLSX.utils.json_to_sheet(allEntries.map(e => ({ Date: e.date, Hours: e.hours })));
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Work Hours");
+      XLSX.writeFile(wb, "work_hours.xlsx");
+    });
 
     entryForm.addEventListener("submit", (e) => {
       e.preventDefault();
@@ -231,7 +352,8 @@
     db.ref("entries").on("value", snapshot => {
       try {
         const data = snapshot.val() || {};
-        allEntries = Object.values(data).map(d => ({ ...d, date: d.date, hours: +d.hours }));
+        allEntries = Object.entries(data).map(([id, d]) => ({ id, date: d.date, hours: +d.hours }));
+        renderTable(allEntries);
         const currentWeek = getWeekStart(new Date()).toISOString().slice(0, 10);
         const filtered = allEntries.filter(e => getWeekStart(new Date(e.date)).toISOString().slice(0, 10) === currentWeek);
         updateSelectedPeriodStats(filtered);
