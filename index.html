@@ -41,11 +41,11 @@
 
     <form id="filterForm" class="mb-4">
       <div class="row g-2 align-items-end">
-        <div class="col-md-4">
+        <div class="col-md-3">
           <label for="startDate">Start Date</label>
           <input type="date" id="startDate" class="form-control" aria-label="Start Date" />
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
           <label for="endDate">End Date</label>
           <input type="date" id="endDate" class="form-control" aria-label="End Date" />
         </div>
@@ -54,6 +54,12 @@
         </div>
         <div class="col-md-2">
           <button type="button" id="resetBtn" class="btn btn-outline-secondary w-100">Reset</button>
+        </div>
+        <div class="col-md-1">
+          <button type="button" id="currentWeekBtn" class="btn btn-outline-primary w-100">Current Week</button>
+        </div>
+        <div class="col-md-1">
+          <button type="button" id="prevWeekBtn" class="btn btn-outline-primary w-100">Previous Week</button>
         </div>
       </div>
     </form>
@@ -134,6 +140,8 @@
     const entryForm = document.getElementById("entryForm");
     const filterForm = document.getElementById("filterForm");
     const resetBtn = document.getElementById("resetBtn");
+    const currentWeekBtn = document.getElementById("currentWeekBtn");
+    const prevWeekBtn = document.getElementById("prevWeekBtn");
     const entriesTable = document.getElementById("entriesTable");
     const addBtn = document.getElementById("addBtn");
     const newDate = document.getElementById("newDate");
@@ -189,6 +197,7 @@
           try {
             await db.ref(`entries/${id}`).remove();
           } catch (error) {
+            document.getElementById("weekStatus").textContentសម្ពុជា (Khmer) is not supported for translation.
             document.getElementById("weekStatus").textContent = "Error deleting entry";
           }
         });
@@ -247,6 +256,49 @@
       d.setUTCHours(0, 0, 0, 0);
       return d;
     }
+
+    function formatDateForInput(date) {
+      return date.toISOString().split("T")[0];
+    }
+
+    currentWeekBtn.addEventListener("click", () => {
+      const today = new Date();
+      const weekStart = getWeekStart(today);
+      const weekEnd = new Date(today);
+      weekEnd.setHours(23, 59, 59, 999);
+
+      document.getElementById("startDate").value = formatDateForInput(weekStart);
+      document.getElementById("endDate").value = formatDateForInput(weekEnd);
+
+      const filtered = allEntries.filter(e => {
+        const date = new Date(e.date);
+        return date >= weekStart && date <= weekEnd;
+      });
+
+      updateSelectedPeriodStats(filtered);
+      updateGlobalStats(filtered);
+    });
+
+    prevWeekBtn.addEventListener("click", () => {
+      const today = new Date();
+      const weekStart = getWeekStart(today);
+      const prevWeekStart = new Date(weekStart);
+      prevWeekStart.setUTCDate(prevWeekStart.getUTCDate() - 7);
+      const prevWeekEnd = new Date(prevWeekStart);
+      prevWeekEnd.setUTCDate(prevWeekEnd.getUTCDate() + 6);
+      prevWeekEnd.setUTCHours(23, 59, 59, 999);
+
+      document.getElementById("startDate").value = formatDateForInput(prevWeekStart);
+      document.getElementById("endDate").value = formatDateForInput(prevWeekEnd);
+
+      const filtered = allEntries.filter(e => {
+        const date = new Date(e.date);
+        return date >= prevWeekStart && date <= prevWeekEnd;
+      });
+
+      updateSelectedPeriodStats(filtered);
+      updateGlobalStats(filtered);
+    });
 
     function updateSelectedPeriodStats(filtered) {
       const totalHours = filtered.reduce((sum, e) => sum + e.hours, 0);
