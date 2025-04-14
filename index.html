@@ -10,8 +10,8 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cal-heatmap@4.2.7/dist/cal-heatmap.min.css" />
-  <script src="https://cdn.jsdelivr.net/npm/cal-heatmap@4.2.7/dist/cal-heatmap.min.js"></script>
+  <!-- Add ECharts for the calendar heatmap -->
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
   <style>
     body { padding: 2rem; background: #f8f9fa; }
     .stat-box { border-radius: 12px; background: white; box-shadow: 0 0 10px rgba(0,0,0,0.05); padding: 1rem; margin-bottom: 1rem; }
@@ -21,9 +21,11 @@
     @keyframes highlight { 0% { background-color: #d4edda; } 100% { background-color: transparent; } }
     .editable:hover { background-color: #f1f1f1; cursor: pointer; }
     .btn-sm { padding: 0.25rem 0.5rem; }
+    #calendar-heatmap { height: 300px; width: 100%; }
     @media (max-width: 576px) {
       body { padding: 1rem; }
       .btn-sm { font-size: 0.75rem; }
+      #calendar-heatmap { height: 200px; }
     }
   </style>
 </head>
@@ -138,11 +140,11 @@
   </div>
 
   <script>
-    // Wait for DOM to load and external scripts to be ready
+    // Wait for DOM to load
     document.addEventListener("DOMContentLoaded", () => {
-      // Check if CalHeatmap is available
-      if (typeof CalHeatmap === "undefined") {
-        console.error("CalHeatmap library failed to load. Please check the CDN link or network connection.");
+      // Check if ECharts is available
+      if (typeof echarts === "undefined") {
+        console.error("ECharts library failed to load. Please check the CDN link or network connection.");
       }
 
       // Firebase setup
@@ -412,49 +414,76 @@
         });
       };
 
-      // Render calendar heatmap
+      // Render calendar heatmap using ECharts
       const renderCalendarHeatmap = (entries) => {
         if (!elements.calendarHeatmap) return console.error("calendarHeatmap not found");
-        if (typeof CalHeatmap === "undefined") {
-          console.error("CalHeatmap is not available. Skipping heatmap rendering.");
+        if (typeof echarts === "undefined") {
+          console.error("ECharts is not available. Skipping heatmap rendering.");
           elements.calendarHeatmap.innerHTML = `
             <p class="text-muted">
-              Unable to load calendar heatmap. This feature requires an internet connection to load the CalHeatmap library.
+              Unable to load calendar heatmap. This feature requires an internet connection to load the ECharts library.
               Please ensure you're online and try refreshing the page.
             </p>
           `;
           return;
         }
 
-        elements.calendarHeatmap.innerHTML = "";
+        // Initialize ECharts instance
+        const chart = echarts.init(elements.calendarHeatmap);
 
-        const data = {};
-        entries.forEach(e => {
-          const date = new Date(e.date);
-          date.setHours(0, 0, 0, 0);
-          const timestamp = Math.floor(date.getTime() / 1000);
-          data[timestamp] = (data[timestamp] || 0) + e.hours;
+        // Prepare data for ECharts
+        const data = entries.map(entry => {
+          const date = new Date(entry.date);
+          return [entry.date, entry.hours];
         });
 
-        try {
-          const cal = new CalHeatmap();
-          cal.paint({
-            itemSelector: "#calendar-heatmap",
-            domain: { type: "month" },
-            subDomain: { type: "day" },
-            range: 6,
-            data: {
-              source: data,
-              type: "json",
-              x: d => +d,
-              y: d => data[+d] || 0
+        // Calculate the date range (last 6 months)
+        const endDate = new Date();
+        const startDate = new Date();
+        startDate.setMonth(startDate.getMonth() - 6);
+
+        // ECharts calendar heatmap configuration
+        const option = {
+          tooltip: {
+            position: 'top',
+            formatter: (params) => {
+              return `${params.data[0]}: ${params.data[1]} hours`;
+            }
+          },
+          visualMap: {
+            min: 0,
+            max: 10,
+            type: 'piecewise',
+            orient: 'horizontal',
+            left: 'center',
+            top: 0,
+            inRange: {
+              color: ['#e6f3ff', '#004085'] // Same color range as CalHeatmap
             },
-            date: { start: new Date() },
-            scale: { color: { type: "linear", range: ["#e6f3ff", "#004085"], domain: [0, 10] } },
-            legend: { show: true, itemSelector: "#calendar-heatmap-legend", label: "Hours" }
-          });
+            text: ['High', 'Low'],
+            calculable: true
+          },
+          calendar: {
+            range: [startDate, endDate],
+            cellSize: ['auto', 20],
+            itemStyle: {
+              borderColor: '#fff'
+            }
+          },
+          series: [{
+            type: 'heatmap',
+            coordinateSystem: 'calendar',
+            data: data,
+            label: {
+              show: false
+            }
+          }]
+        };
+
+        try {
+          chart.setOption(option);
         } catch (error) {
-          console.error("Error rendering CalHeatmap:", error);
+          console.error("Error rendering ECharts calendar heatmap:", error);
           elements.calendarHeatmap.innerHTML = `
             <p class="text-muted">
               Error rendering calendar heatmap. Please try refreshing the page or check your internet connection.
