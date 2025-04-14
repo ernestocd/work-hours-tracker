@@ -128,6 +128,7 @@
   </div>
 
   <script>
+    // Firebase configuration
     const firebaseConfig = {
       apiKey: "AIzaSyAnujd0rgEBYUVly32YOsQNBnuOYzVw8u0",
       authDomain: "work-hours-tracker-f48a6.firebaseapp.com",
@@ -138,9 +139,11 @@
       appId: "1:945814366512:web:778a312b936701199940f5"
     };
 
+    // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
+    // DOM elements
     const entryForm = document.getElementById("entryForm");
     const filterForm = document.getElementById("filterForm");
     const resetBtn = document.getElementById("resetBtn");
@@ -150,8 +153,32 @@
     const exportCsvBtn = document.getElementById("exportCsvBtn");
     const exportExcelBtn = document.getElementById("exportExcelBtn");
 
+    // Global entries store
     let allEntries = [];
 
+    // Utility: Get the start of the week (Sunday, 00:00:00)
+    function getWeekStart(date) {
+      const d = new Date(date);
+      d.setDate(d.getDate() - d.getDay());
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }
+
+    // Utility: Format date for input fields (YYYY-MM-DD)
+    function formatDateForInput(date) {
+      return date.toISOString().split("T")[0];
+    }
+
+    // Utility: Count weeks between two dates (inclusive of start week)
+    function countWeeksInRange(startDate, endDate) {
+      const start = getWeekStart(new Date(startDate));
+      const end = getWeekStart(new Date(endDate));
+      const diffTime = Math.abs(end - start);
+      const diffWeeks = Math.floor(diffTime / (7 * 24 * 60 * 60 * 1000)) + 1;
+      return Math.max(1, diffWeeks);
+    }
+
+    // Render table with entries
     function renderTable(entries) {
       const sortedEntries = [...entries].sort((a, b) => new Date(b.date) - new Date(a.date));
       const rows = sortedEntries.map(entry => `
@@ -172,28 +199,33 @@
       attachTableListeners();
     }
 
+    // Attach listeners to table inputs and buttons
     function attachTableListeners() {
+      // Edit date or hours
       document.querySelectorAll(".date-field, .hours-field").forEach(input => {
-        input.addEventListener("change", async (e) => {
+        input.addEventListener("change", async e => {
           const row = e.target.closest("tr");
           const id = row.dataset.id;
           const date = row.querySelector(".date-field").value;
           const hours = parseFloat(row.querySelector(".hours-field").value);
-          if (date && hours >= 0) {
-            try {
-              await db.ref(`entries/${id}`).update({ date, hours });
-              row.classList.add("highlight");
-              setTimeout(() => row.classList.remove("highlight"), 1000);
-            } catch (error) {
-              console.error("Error updating entry:", error);
-              document.getElementById("weekStatus").textContent = "Error updating entry";
-            }
+          if (!date || isNaN(hours) || hours < 0) {
+            document.getElementById("weekStatus").textContent = "Invalid date or hours";
+            return;
+          }
+          try {
+            await db.ref(`entries/${id}`).update({ date, hours });
+            row.classList.add("highlight");
+            setTimeout(() => row.classList.remove("highlight"), 1000);
+          } catch (error) {
+            console.error("Error updating entry:", error);
+            document.getElementById("weekStatus").textContent = "Error updating entry";
           }
         });
       });
 
+      // Delete entry
       document.querySelectorAll(".delete-btn").forEach(btn => {
-        btn.addEventListener("click", async (e) => {
+        btn.addEventListener("click", async e => {
           if (!confirm("Are you sure you want to delete this entry?")) return;
           const id = e.target.closest("tr").dataset.id;
           try {
@@ -205,23 +237,26 @@
         });
       });
 
-      const addBtn = document.getElementById("addBtn");
-      addBtn.addEventListener("click", async () => {
+      // Add new entry (table row)
+      document.getElementById("addBtn").addEventListener("click", async () => {
         const date = document.getElementById("newDate").value;
         const hours = parseFloat(document.getElementById("newHours").value);
-        if (date && hours >= 0) {
-          try {
-            await db.ref("entries").push({ date, hours });
-            document.getElementById("newDate").value = "";
-            document.getElementById("newHours").value = "";
-          } catch (error) {
-            console.error("Error adding entry:", error);
-            document.getElementById("weekStatus").textContent = "Error adding entry";
-          }
+        if (!date || isNaN(hours) || hours < 0) {
+          document.getElementById("weekStatus").textContent = "Invalid date or hours";
+          return;
+        }
+        try {
+          await db.ref("entries").push({ date, hours });
+          document.getElementById("newDate").value = "";
+          document.getElementById("newHours").value = "";
+        } catch (error) {
+          console.error("Error adding entry:", error);
+          document.getElementById("weekStatus").textContent = "Error adding entry";
         }
       });
     }
 
+    // Export to CSV
     exportCsvBtn.addEventListener("click", () => {
       const csv = ["Date,Hours"];
       allEntries.forEach(entry => csv.push(`${entry.date},${entry.hours}`));
@@ -234,6 +269,7 @@
       URL.revokeObjectURL(url);
     });
 
+    // Export to Excel
     exportExcelBtn.addEventListener("click", () => {
       const ws = XLSX.utils.json_to_sheet(allEntries.map(e => ({ Date: e.date, Hours: e.hours })));
       const wb = XLSX.utils.book_new();
@@ -241,12 +277,17 @@
       XLSX.writeFile(wb, "work_hours.xlsx");
     });
 
-    entryForm.addEventListener("submit", (e) => {
+    // Form submission: Add new entry
+    entryForm.addEventListener("submit", async e => {
       e.preventDefault();
       const date = document.getElementById("date").value;
       const hours = parseFloat(document.getElementById("hours").value);
+      if (!date || isNaN(hours) || hours < 0) {
+        document.getElementById("weekStatus").textContent = "Invalid date or hours";
+        return;
+      }
       try {
-        db.ref("entries").push({ date, hours });
+        await db.ref("entries").push({ date, hours });
         entryForm.reset();
       } catch (error) {
         console.error("Error saving entry:", error);
@@ -254,89 +295,33 @@
       }
     });
 
-    function getWeekStart(date) {
-      const d = new Date(date);
-      const day = d.getDay();
-      d.setDate(d.getDate() - day);
-      d.setHours(0, 0, 0, 0);
-      return d;
-    }
-
-    function formatDateForInput(date) {
-      return date.toISOString().split("T")[0];
-    }
-
-    function countWeeksInRange(startDate, endDate) {
-    const start = getWeekStart(new Date(startDate));
-    const end = getWeekStart(new Date(endDate));
-    const diffTime = end - start;
-    const diffWeeks = Math.floor(diffTime / (7 * 24 * 60 * 60 * 1000)) + 1;
-    return Math.max(1, diffWeeks);
-    }
-
-    currentWeekBtn.addEventListener("click", () => {
-      const today = new Date();
-      const weekStart = getWeekStart(today);
-      const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekStart.getDate() + 6);
-      weekEnd.setHours(23, 59, 59, 999);
-
-      document.getElementById("startDate").value = formatDateForInput(weekStart);
-      document.getElementById("endDate").value = formatDateForInput(weekEnd);
-
-      const filtered = allEntries.filter(e => {
-        const date = new Date(e.date);
-        return date >= weekStart && date <= weekEnd;
-      });
-
-      renderTable(filtered);
-      updateSelectedPeriodStats(filtered);
-      updateGlobalStats(filtered, weekStart, weekEnd);
-    });
-
-    prevWeekBtn.addEventListener("click", () => {
-      const today = new Date();
-      const weekStart = getWeekStart(today);
-      const prevWeekStart = new Date(weekStart);
-      prevWeekStart.setDate(prevWeekStart.getDate() - 7);
-      const prevWeekEnd = new Date(prevWeekStart);
-      prevWeekEnd.setDate(prevWeekEnd.getDate() + 6);
-      prevWeekEnd.setHours(23, 59, 59, 999);
-
-      document.getElementById("startDate").value = formatDateForInput(prevWeekStart);
-      document.getElementById("endDate").value = formatDateForInput(prevWeekEnd);
-
-      const filtered = allEntries.filter(e => {
-        const date = new Date(e.date);
-        return date >= prevWeekStart && date <= prevWeekEnd;
-      });
-
-      renderTable(filtered);
-      updateSelectedPeriodStats(filtered);
-      updateGlobalStats(filtered, prevWeekStart, prevWeekEnd);
-    });
-
-    function updateSelectedPeriodStats(filtered) {
-      const totalHours = filtered.reduce((sum, e) => sum + e.hours, 0);
-      const expected = filtered.length >= 7 ? Math.ceil(filtered.length / 7) * 40 : 40;
-
+    // Update stats for selected period
+    function updateSelectedPeriodStats(entries) {
+      const totalHours = entries.reduce((sum, e) => sum + e.hours, 0);
+      const expectedHours = 40; // Fixed for one week
       document.getElementById("thisWeekHours").textContent = totalHours.toFixed(1);
-      document.getElementById("expectedHours").textContent = expected;
+      document.getElementById("expectedHours").textContent = expectedHours;
 
-      const percent = Math.min(100, (totalHours / expected) * 100);
-      document.getElementById("weekProgress").style.width = percent + "%";
-      let status = totalHours >= expected
+      const percent = Math.min(100, (totalHours / expectedHours) * 100);
+      document.getElementById("weekProgress").style.width = `${percent}%`;
+      let status = totalHours >= expectedHours
         ? "✅ Goal met!"
-        : `❌ ${Math.round(expected - totalHours)} hrs short`;
-      if (totalHours > expected) status = `➕ ${Math.round(totalHours - expected)} hrs over`;
+        : `❌ ${(expectedHours - totalHours).toFixed(1)} hrs short`;
+      if (totalHours > expectedHours) {
+        status = `➕ ${(totalHours - expectedHours).toFixed(1)} hrs over`;
+      }
       document.getElementById("weekStatus").textContent = status;
 
+      // Donut chart
       if (window.donutChart instanceof Chart) window.donutChart.destroy();
       window.donutChart = new Chart(document.getElementById("donutChart"), {
         type: "doughnut",
         data: {
           labels: ["Worked", "Remaining"],
-          datasets: [{ data: [totalHours, Math.max(0, expected - totalHours)], backgroundColor: ["#0d6efd", "#dee2e6"] }]
+          datasets: [{
+            data: [totalHours, Math.max(0, expectedHours - totalHours)],
+            backgroundColor: ["#0d6efd", "#dee2e6"]
+          }]
         },
         options: {
           cutout: "75%",
@@ -344,42 +329,46 @@
         }
       });
 
+      // Weekly bar chart
       const dailyHours = Array(7).fill(0);
-      filtered.forEach(e => dailyHours[new Date(e.date).getDay()] += e.hours);
+      entries.forEach(e => {
+        const day = new Date(e.date).getDay();
+        dailyHours[day] += e.hours;
+      });
       if (window.barChart instanceof Chart) window.barChart.destroy();
       window.barChart = new Chart(document.getElementById("weeklyBarChart"), {
         type: "bar",
         data: {
           labels: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-          datasets: [{ label: "Hours", data: dailyHours, backgroundColor: "#0d6efd" }]
+          datasets: [{
+            label: "Hours",
+            data: dailyHours,
+            backgroundColor: "#0d6efd"
+          }]
         },
         options: {
-          scales: {
-            y: { beginAtZero: true }
-          }
+          scales: { y: { beginAtZero: true } }
         }
       });
     }
 
-    function updateGlobalStats(entries, startDate, endDate) {
+    // Update global stats
+    function updateGlobalStats(entries, startDate = null, endDate = null) {
       const globalTotal = entries.reduce((sum, e) => sum + e.hours, 0);
-      const groupedWeeks = {};
+      const weeks = {};
       entries.forEach(e => {
-        const wk = getWeekStart(new Date(e.date)).toISOString().slice(0, 10);
-        groupedWeeks[wk] = (groupedWeeks[wk] || 0) + e.hours;
+        const weekStart = getWeekStart(new Date(e.date)).toISOString().split("T")[0];
+        weeks[weekStart] = (weeks[weekStart] || 0) + e.hours;
       });
 
-      let totalWeeks;
-      if (startDate && endDate) {
-        totalWeeks = countWeeksInRange(startDate, endDate);
-      } else {
-        totalWeeks = Object.keys(groupedWeeks).length || 1;
-      }
+      const totalWeeks = startDate && endDate
+        ? countWeeksInRange(startDate, endDate)
+        : Object.keys(weeks).length || 1;
 
       const avgWeek = totalWeeks > 0 ? globalTotal / totalWeeks : 0;
-      const avgDay = entries.length ? globalTotal / entries.length : 0;
-      const maxDay = entries.length ? Math.max(...entries.map(e => e.hours)) : 0;
-      const goalWeeks = Object.values(groupedWeeks).filter(v => v >= 40).length;
+      const avgDay = entries.length > 0 ? globalTotal / entries.length : 0;
+      const maxDay = entries.length > 0 ? Math.max(...entries.map(e => e.hours)) : 0;
+      const goalWeeks = Object.values(weeks).filter(hours => hours >= 40).length;
 
       document.getElementById("globalTotal").textContent = globalTotal.toFixed(1);
       document.getElementById("weeksTracked").textContent = totalWeeks;
@@ -388,12 +377,21 @@
       document.getElementById("maxDay").textContent = maxDay.toFixed(1);
       document.getElementById("goalWeeks").textContent = goalWeeks;
 
-      const labels = Object.keys(groupedWeeks);
-      const values = labels.map(l => groupedWeeks[l]);
+      // Trend line chart
+      const labels = Object.keys(weeks).sort();
+      const data = labels.map(label => weeks[label]);
       if (window.lineChart instanceof Chart) window.lineChart.destroy();
       window.lineChart = new Chart(document.getElementById("trendLineChart"), {
         type: "line",
-        data: { labels, datasets: [{ label: "Weekly Hours", data: values, borderColor: "#198754", fill: false }] },
+        data: {
+          labels,
+          datasets: [{
+            label: "Weekly Hours",
+            data,
+            borderColor: "#198754",
+            fill: false
+          }]
+        },
         options: {
           plugins: {
             annotation: {
@@ -416,38 +414,26 @@
               }
             }
           },
-          scales: {
-            y: { beginAtZero: true }
-          }
+          scales: { y: { beginAtZero: true } }
         }
       });
     }
 
-    db.ref("entries").on("value", snapshot => {
-      try {
-        const data = snapshot.val() || {};
-        allEntries = Object.entries(data).map(([id, d]) => ({ id, date: d.date, hours: +d.hours }));
-        renderTable(allEntries);
-        const currentWeek = getWeekStart(new Date());
-        const filtered = allEntries.filter(e => {
-          const date = new Date(e.date);
-          return date >= currentWeek && date <= new Date();
-        });
-        updateSelectedPeriodStats(filtered);
-        updateGlobalStats(allEntries);
-      } catch (error) {
-        console.error("Error loading data:", error);
-        document.getElementById("weekStatus").textContent = "Error loading data";
-      }
-    });
-
+    // Filter form submission
     filterForm.addEventListener("submit", e => {
       e.preventDefault();
-      const start = new Date(document.getElementById("startDate").value);
-      const end = new Date(document.getElementById("endDate").value);
+      const startDate = document.getElementById("startDate").value;
+      const endDate = document.getElementById("endDate").value;
+      if (!startDate || !endDate) {
+        document.getElementById("weekStatus").textContent = "Please select both dates";
+        return;
+      }
+
+      const start = new Date(startDate);
+      const end = new Date(endDate);
       end.setHours(23, 59, 59, 999);
-      if (!start || !end || start > end) {
-        document.getElementById("weekStatus").textContent = "Invalid date range";
+      if (start > end) {
+        document.getElementById("weekStatus").textContent = "Start date must be before end date";
         return;
       }
 
@@ -461,12 +447,76 @@
       updateGlobalStats(filtered, start, end);
     });
 
+    // Reset filter
     resetBtn.addEventListener("click", () => {
       document.getElementById("startDate").value = "";
       document.getElementById("endDate").value = "";
+      document.getElementById("weekStatus").textContent = "";
       renderTable(allEntries);
       updateSelectedPeriodStats(allEntries);
       updateGlobalStats(allEntries);
+    });
+
+    // Current week filter
+    currentWeekBtn.addEventListener("click", () => {
+      const today = new Date();
+      const weekStart = getWeekStart(today);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 6);
+      weekEnd.setHours(23, 59, 59, 999);
+
+      document.getElementById("startDate").value = formatDateForInput(weekStart);
+      document.getElementById("endDate").value = formatDateForInput(weekEnd);
+
+      const filtered = allEntries.filter(e => {
+        const date = new Date(e.date);
+        return date >= weekStart && date <= weekEnd;
+      });
+
+      renderTable(filtered);
+      updateSelectedPeriodStats(filtered);
+      updateGlobalStats(filtered, weekStart, weekEnd);
+    });
+
+    // Previous week filter
+    prevWeekBtn.addEventListener("click", () => {
+      const today = new Date();
+      const weekStart = getWeekStart(today);
+      const prevWeekStart = new Date(weekStart);
+      prevWeekStart.setDate(prevWeekStart.getDate() - 7);
+      const prevWeekEnd = new Date(prevWeekStart);
+      prevWeekEnd.setDate(prevWeekEnd.getDate() + 6);
+      prevWeekEnd.setHours(23, 59, 59, 999);
+
+      document.getElementById("startDate").value = formatDateForInput(prevWeekStart);
+      document.getElementById("endDate").value = formatDateForInput(prevWeekEnd);
+
+      const filtered = allEntries.filter(e => {
+        const date = new Date(e.date);
+        return date >= prevWeekStart && date <= prevWeekEnd;
+      });
+
+      renderTable(filtered);
+      updateSelectedPeriodStats(filtered);
+      updateGlobalStats(filtered, prevWeekStart, prevWeekEnd);
+    });
+
+    // Firebase data listener
+    db.ref("entries").on("value", snapshot => {
+      try {
+        const data = snapshot.val() || {};
+        allEntries = Object.entries(data).map(([id, entry]) => ({
+          id,
+          date: entry.date,
+          hours: parseFloat(entry.hours)
+        }));
+        renderTable(allEntries);
+        updateSelectedPeriodStats(allEntries);
+        updateGlobalStats(allEntries);
+      } catch (error) {
+        console.error("Error loading entries:", error);
+        document.getElementById("weekStatus").textContent = "Error loading data";
+      }
     });
   </script>
 </body>
