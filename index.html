@@ -18,6 +18,7 @@
   <div class="container">
     <h1 class="mb-4">📊 Work Hours Tracker</h1>
 
+    <!-- Entry Form -->
     <form id="entryForm" class="mb-4">
       <div class="row g-2">
         <div class="col-md-4">
@@ -32,6 +33,7 @@
       </div>
     </form>
 
+    <!-- Filter Form -->
     <form id="filterForm" class="mb-4">
       <div class="row g-2 align-items-end">
         <div class="col-md-4">
@@ -51,6 +53,7 @@
       </div>
     </form>
 
+    <!-- Stats Section -->
     <div class="row">
       <div class="col-md-4 stat-box">
         <h5>Selected Period</h5>
@@ -77,6 +80,7 @@
       </div>
     </div>
 
+    <!-- Charts -->
     <div class="row mt-4">
       <div class="col-md-6">
         <canvas id="weeklyBarChart"></canvas>
@@ -133,10 +137,11 @@
 
       const percent = Math.min(100, (totalHours / expected) * 100);
       document.getElementById("weekProgress").style.width = percent + "%";
+
       let status = totalHours >= expected
         ? "✅ Goal met!"
-        : ❌ ${Math.round(expected - totalHours)} hrs short.;
-      if (totalHours > expected) status = ➕ ${Math.round(totalHours - expected)} hrs over.;
+        : `❌ ${Math.round(expected - totalHours)} hrs short.`;
+      if (totalHours > expected) status = `➕ ${Math.round(totalHours - expected)} hrs over.`;
       document.getElementById("weekStatus").textContent = status;
 
       if (window.donutChart instanceof Chart) window.donutChart.destroy();
@@ -154,7 +159,10 @@
       if (window.barChart instanceof Chart) window.barChart.destroy();
       window.barChart = new Chart(document.getElementById("weeklyBarChart"), {
         type: "bar",
-        data: { labels: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], datasets: [{ label: "Hours", data: dailyHours, backgroundColor: "#0d6efd" }] }
+        data: {
+          labels: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+          datasets: [{ label: "Hours", data: dailyHours, backgroundColor: "#0d6efd" }]
+        }
       });
     }
 
@@ -224,19 +232,19 @@
     });
 
     filterForm.addEventListener("submit", e => {
-    e.preventDefault();
-    const start = new Date(document.getElementById("startDate").value);
-    const end = new Date(document.getElementById("endDate").value);
-    if (!start || !end || start > end) return alert("Invalid range");
-  
-    const filtered = allEntries.filter(e => {
-      const date = new Date(e.date);
-      return date >= start && date <= end;
+      e.preventDefault();
+      const start = new Date(document.getElementById("startDate").value);
+      const end = new Date(document.getElementById("endDate").value);
+      if (!start || !end || start > end) return alert("Invalid range");
+
+      const filtered = allEntries.filter(e => {
+        const date = new Date(e.date);
+        return date >= start && date <= end;
+      });
+
+      updateSelectedPeriodStats(filtered);
+      updateGlobalStats(filtered);
     });
-  
-    updateSelectedPeriodStats(filtered);
-    updateGlobalStats(filtered); // 🟢 Add this line to update the trend line chart
-  });
 
     resetBtn.addEventListener("click", () => {
       const currentWeek = getWeekStart(new Date()).toISOString().slice(0, 10);
