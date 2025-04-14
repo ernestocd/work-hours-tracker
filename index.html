@@ -108,7 +108,7 @@
         <p>Weeks Tracked: <strong id="weeksTracked">0</strong></p>
         <p>Global Avg/Week: <strong id="globalAvg">0</strong></p>
         <p>Successful Weeks: <strong id="goalWeeks">0</strong></p>
-        <p>Days Worked: <strong id="daysWorked">0</strong></p>
+        <p>Days Worked: <strong id="daysWorked">0/7</strong></p>
       </div>
 
       <div class="col-md-4 stat-box">
@@ -369,23 +369,34 @@
     function updateGlobalStats(entries, startDate = null, endDate = null) {
       const globalTotal = entries.reduce((sum, e) => sum + e.hours, 0);
       const weeks = {};
-      const uniqueDays = new Set();
+      const daysPerWeek = {};
 
       entries.forEach(e => {
         const weekStart = getWeekStart(new Date(e.date)).toISOString().split("T")[0];
         weeks[weekStart] = (weeks[weekStart] || 0) + e.hours;
-        uniqueDays.add(e.date); // Track unique dates
+        // Track unique days per week
+        if (!daysPerWeek[weekStart]) {
+          daysPerWeek[weekStart] = new Set();
+        }
+        daysPerWeek[weekStart].add(e.date);
       });
 
       const totalWeeks = startDate && endDate
         ? countWeeksInRange(startDate, endDate)
         : Object.keys(weeks).length || 1;
 
+      // Calculate average days worked per week
+      let totalDaysWorked = 0;
+      Object.values(daysPerWeek).forEach(days => {
+        totalDaysWorked += days.size;
+      });
+      const avgDaysWorked = totalWeeks > 0 ? Math.round(totalDaysWorked / totalWeeks) : 0;
+      const daysWorkedDisplay = `${avgDaysWorked}/7`;
+
       const avgWeek = totalWeeks > 0 ? globalTotal / totalWeeks : 0;
       const avgDay = entries.length > 0 ? globalTotal / entries.length : 0;
       const maxDay = entries.length > 0 ? Math.max(...entries.map(e => e.hours)) : 0;
       const goalWeeks = Object.values(weeks).filter(hours => hours >= 40).length;
-      const daysWorked = uniqueDays.size;
 
       document.getElementById("globalTotal").textContent = globalTotal.toFixed(1);
       document.getElementById("weeksTracked").textContent = totalWeeks;
@@ -393,7 +404,7 @@
       document.getElementById("avgDay").textContent = avgDay.toFixed(1);
       document.getElementById("maxDay").textContent = maxDay.toFixed(1);
       document.getElementById("goalWeeks").textContent = goalWeeks;
-      document.getElementById("daysWorked").textContent = daysWorked;
+      document.getElementById("daysWorked").textContent = daysWorkedDisplay;
 
       // Trend line chart
       const labels = Object.keys(weeks).sort();
