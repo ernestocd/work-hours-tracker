@@ -7,76 +7,21 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.1.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/nouislider@15.7.0/distribute/nouislider.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/nouislider@15.7.0/distribute/nouislider.min.css" rel="stylesheet">
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <style>
     body { padding: 2rem; background: #f8f9fa; }
     .stat-box { border-radius: 12px; background: white; box-shadow: 0 0 10px rgba(0,0,0,0.05); padding: 1rem; margin-bottom: 1rem; }
-    #lineSlider { width: 100%; }
+    #sliderContainer { margin-top: 20px; }
   </style>
 </head>
 <body>
   <div class="container">
     <h1 class="mb-4">📊 Work Hours Tracker</h1>
 
-    <form id="entryForm" class="mb-4">
-      <div class="row g-2">
-        <div class="col-md-4">
-          <input type="date" id="date" class="form-control" required />
-        </div>
-        <div class="col-md-4">
-          <input type="number" id="hours" class="form-control" placeholder="Hours Worked" step="0.1" min="0" required />
-        </div>
-        <div class="col-md-4">
-          <button type="submit" class="btn btn-primary w-100">Add Entry</button>
-        </div>
-      </div>
-    </form>
-
-    <form id="filterForm" class="mb-4">
-      <div class="row g-2 align-items-end">
-        <div class="col-md-4">
-          <label>Start Date</label>
-          <input type="date" id="startDate" class="form-control" />
-        </div>
-        <div class="col-md-4">
-          <label>End Date</label>
-          <input type="date" id="endDate" class="form-control" />
-        </div>
-        <div class="col-md-2">
-          <button type="submit" class="btn btn-secondary w-100">Filter</button>
-        </div>
-        <div class="col-md-2">
-          <button type="button" id="resetBtn" class="btn btn-outline-secondary w-100">Reset</button>
-        </div>
-      </div>
-    </form>
-
-    <div class="row">
-      <div class="col-md-4 stat-box">
-        <h5>Selected Period</h5>
-        <p><strong id="thisWeekHours">0</strong> / <span id="expectedHours">40</span> hrs</p>
-        <div class="progress mb-2">
-          <div id="weekProgress" class="progress-bar" role="progressbar" style="width: 0%;"></div>
-        </div>
-        <p id="weekStatus" class="text-muted small"></p>
-        <canvas id="donutChart"></canvas>
-      </div>
-
-      <div class="col-md-4 stat-box">
-        <h5>Global Stats</h5>
-        <p>Total Hours: <strong id="globalTotal">0</strong></p>
-        <p>Weeks Tracked: <strong id="weeksTracked">0</strong></p>
-        <p>Global Avg/Week: <strong id="globalAvg">0</strong></p>
-        <p>Successful Weeks: <strong id="goalWeeks">0</strong></p>
-      </div>
-
-      <div class="col-md-4 stat-box">
-        <h5>Daily Insights</h5>
-        <p>Longest Day: <strong id="maxDay">0 hrs</strong></p>
-        <p>Avg/Day: <strong id="avgDay">0</strong></p>
-      </div>
-    </div>
+    <!-- rest of your form and stat boxes stay unchanged -->
 
     <div class="row mt-4">
       <div class="col-md-6">
@@ -84,15 +29,14 @@
       </div>
       <div class="col-md-6">
         <canvas id="trendLineChart"></canvas>
-        <input type="range" id="lineSlider" min="1" max="10" step="1" value="10" />
+        <div id="sliderContainer"></div>
       </div>
     </div>
   </div>
 
   <script>
     Chart.register(window['chartjs-plugin-annotation']);
-    const lineSlider = document.getElementById("lineSlider");
-    let allEntries = [], trendChartData = [];
+    let allEntries = [], trendChartData = [], slider = null;
 
     const firebaseConfig = {
       apiKey: "AIzaSyAnujd0rgEBYUVly32YOsQNBnuOYzVw8u0",
@@ -107,19 +51,6 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const entryForm = document.getElementById("entryForm");
-    const filterForm = document.getElementById("filterForm");
-    const resetBtn = document.getElementById("resetBtn");
-
-    entryForm.addEventListener("submit", e => {
-      e.preventDefault();
-      const date = document.getElementById("date").value;
-      const hours = parseFloat(document.getElementById("hours").value);
-      const id = db.ref("entries").push().key;
-      db.ref("entries/" + id).set({ date, hours });
-      entryForm.reset();
-    });
-
     function getWeekStart(date) {
       const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
       const day = d.getUTCDay();
@@ -132,16 +63,43 @@
       const weekLabels = Object.keys(dataObj);
       const weekValues = weekLabels.map(k => dataObj[k]);
       trendChartData = weekLabels.map((k, i) => ({ label: k, value: weekValues[i] }));
-      lineSlider.max = trendChartData.length;
-      lineSlider.value = trendChartData.length;
-      renderTrendChart();
+      initSlider();
     }
 
-    function renderTrendChart() {
-      const limit = parseInt(lineSlider.value);
-      const trimmed = trendChartData.slice(-limit);
-      const labels = trimmed.map(d => d.label);
-      const values = trimmed.map(d => d.value);
+    function initSlider() {
+      const container = document.getElementById("sliderContainer");
+      container.innerHTML = "";
+      slider = document.createElement("div");
+      container.appendChild(slider);
+
+      const count = trendChartData.length;
+      if (count <= 1) return renderTrendChart(0, count - 1);
+
+      noUiSlider.create(slider, {
+        start: [0, count - 1],
+        connect: true,
+        range: {
+          min: 0,
+          max: count - 1
+        },
+        step: 1,
+        tooltips: true,
+        format: {
+          to: value => Math.round(value),
+          from: value => Math.round(value)
+        }
+      });
+
+      slider.noUiSlider.on("update", (values) => {
+        const [min, max] = values.map(v => parseInt(v));
+        renderTrendChart(min, max);
+      });
+    }
+
+    function renderTrendChart(min = 0, max = trendChartData.length - 1) {
+      const sliced = trendChartData.slice(min, max + 1);
+      const labels = sliced.map(d => d.label);
+      const values = sliced.map(d => d.value);
 
       if (window.lineChart instanceof Chart) window.lineChart.destroy();
       window.lineChart = new Chart(document.getElementById("trendLineChart"), {
@@ -172,8 +130,6 @@
         }
       });
     }
-
-    lineSlider.addEventListener("input", renderTrendChart);
 
     db.ref("entries").on("value", snapshot => {
       const data = snapshot.val() || {};
