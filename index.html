@@ -399,7 +399,7 @@
                     label: {
                       content: "Goal (40 hrs)",
                       enabled: true,
-                      position: " start",
+                      position: "start",
                       backgroundColor: "rgba(255, 99, 132, 0.8)",
                       color: "white",
                       font: { weight: "bold" }
@@ -417,7 +417,7 @@
       const renderCalendarHeatmap = (entries) => {
         if (!elements.calendarHeatmap) return console.error("calendarHeatmap not found");
         if (typeof echarts === "undefined") {
-          console.error("ECharts is not available.Gen heatmap rendering.");
+          console.error("ECharts is not available. Skipping heatmap rendering.");
           elements.calendarHeatmap.innerHTML = `
             <p class="text-muted">
               Unable to load calendar heatmap. This feature requires an internet connection to load the ECharts library.
@@ -447,7 +447,8 @@
 
         // Define custom break points for the visualMap
         const pieces = [
-          { min: 0, max: 2, label: '0-2 hrs', color: '#e6f3ff' },
+          { value: 0, label: '0 hrs (No Work)', color: '#ff0000' }, // Red for 0 hours
+          { min: 0, max: 2, label: '0-2 hrs', color: '#e6f3ff' }, // Excludes 0 due to the previous rule
           { min: 2, max: 4, label: '2-4 hrs', color: '#b3d9ff' },
           { min: 4, max: 6, label: '4-6 hrs', color: '#80bfff' },
           { min: 6, max: 8, label: '6-8 hrs', color: '#4d94ff' },
