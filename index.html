@@ -94,7 +94,7 @@
     <div class="row">
       <div class="col-md-4 stat-box">
         <h5>Selected Period</h5>
-        <p><strong id="thisWeekHours">0</strong> / <span id="expectedHours">40</span> hrs</p>
+        <p><strong id="thisWeekHours">0</strong> / <span id="expectedHours">40</span> hrs (<span id="weeksCount">1</span> weeks)</p>
         <div class="progress mb-2">
           <div id="weekProgress" class="progress-bar" role="progressbar" style="width: 0%;"></div>
         </div>
@@ -108,6 +108,7 @@
         <p>Weeks Tracked: <strong id="weeksTracked">0</strong></p>
         <p>Global Avg/Week: <strong id="globalAvg">0</strong></p>
         <p>Successful Weeks: <strong id="goalWeeks">0</strong></p>
+        <p>Days Worked: <strong id="daysWorked">0</strong></p>
       </div>
 
       <div class="col-md-4 stat-box">
@@ -296,13 +297,25 @@
     });
 
     // Update stats for selected period
-    function updateSelectedPeriodStats(entries) {
+    function updateSelectedPeriodStats(entries, startDate = null, endDate = null) {
       const totalHours = entries.reduce((sum, e) => sum + e.hours, 0);
-      const expectedHours = 40; // Fixed for one week
+      
+      // Calculate number of weeks in the period
+      let weeksInPeriod = 1;
+      if (startDate && endDate) {
+        weeksInPeriod = countWeeksInRange(startDate, endDate);
+      } else {
+        // For default view, use unique weeks from entries
+        const weekStarts = new Set(entries.map(e => getWeekStart(new Date(e.date)).toISOString()));
+        weeksInPeriod = weekStarts.size || 1;
+      }
+      
+      const expectedHours = weeksInPeriod * 40; // 40 hours per week
       document.getElementById("thisWeekHours").textContent = totalHours.toFixed(1);
-      document.getElementById("expectedHours").textContent = expectedHours;
+      document.getElementById("expectedHours").textContent = expectedHours.toFixed(1);
+      document.getElementById("weeksCount").textContent = weeksInPeriod;
 
-      const percent = Math.min(100, (totalHours / expectedHours) * 100);
+      const percent = expectedHours > 0 ? Math.min(100, (totalHours / expectedHours) * 100) : 0;
       document.getElementById("weekProgress").style.width = `${percent}%`;
       let status = totalHours >= expectedHours
         ? "✅ Goal met!"
@@ -356,9 +369,12 @@
     function updateGlobalStats(entries, startDate = null, endDate = null) {
       const globalTotal = entries.reduce((sum, e) => sum + e.hours, 0);
       const weeks = {};
+      const uniqueDays = new Set();
+
       entries.forEach(e => {
         const weekStart = getWeekStart(new Date(e.date)).toISOString().split("T")[0];
         weeks[weekStart] = (weeks[weekStart] || 0) + e.hours;
+        uniqueDays.add(e.date); // Track unique dates
       });
 
       const totalWeeks = startDate && endDate
@@ -369,6 +385,7 @@
       const avgDay = entries.length > 0 ? globalTotal / entries.length : 0;
       const maxDay = entries.length > 0 ? Math.max(...entries.map(e => e.hours)) : 0;
       const goalWeeks = Object.values(weeks).filter(hours => hours >= 40).length;
+      const daysWorked = uniqueDays.size;
 
       document.getElementById("globalTotal").textContent = globalTotal.toFixed(1);
       document.getElementById("weeksTracked").textContent = totalWeeks;
@@ -376,6 +393,7 @@
       document.getElementById("avgDay").textContent = avgDay.toFixed(1);
       document.getElementById("maxDay").textContent = maxDay.toFixed(1);
       document.getElementById("goalWeeks").textContent = goalWeeks;
+      document.getElementById("daysWorked").textContent = daysWorked;
 
       // Trend line chart
       const labels = Object.keys(weeks).sort();
@@ -443,7 +461,7 @@
       });
 
       renderTable(filtered);
-      updateSelectedPeriodStats(filtered);
+      updateSelectedPeriodStats(filtered, start, end);
       updateGlobalStats(filtered, start, end);
     });
 
@@ -474,7 +492,7 @@
       });
 
       renderTable(filtered);
-      updateSelectedPeriodStats(filtered);
+      updateSelectedPeriodStats(filtered, weekStart, weekEnd);
       updateGlobalStats(filtered, weekStart, weekEnd);
     });
 
@@ -497,7 +515,7 @@
       });
 
       renderTable(filtered);
-      updateSelectedPeriodStats(filtered);
+      updateSelectedPeriodStats(filtered, prevWeekStart, prevWeekEnd);
       updateGlobalStats(filtered, prevWeekStart, prevWeekEnd);
     });
 
