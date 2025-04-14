@@ -218,7 +218,7 @@
 
     db.ref("entries").on("value", snapshot => {
       const data = snapshot.val() || {};
-      allEntries = Object.values(data).map(d => ({ ...d, date: d.date, hours: +d.hours }));
+      allEntries = Object.values(data).map(d => ({ ...d, date: new Date(d.date), hours: +d.hours }));
       updateCharts(allEntries);
       updateGlobalStats(allEntries);
     });
