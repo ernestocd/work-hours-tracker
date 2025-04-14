@@ -123,55 +123,53 @@
       return d;
     }
 
-    function updateSelectedPeriodStats(filteredEntries) {
-      const totalHours = filteredEntries.reduce((sum, e) => sum + e.hours, 0);
-      const daysInRange = [...new Set(filteredEntries.map(e => e.date.toDateString()))].length;
-      const expectedHours = daysInRange >= 7 ? Math.floor(daysInRange / 7) * 40 : 40;
+    function updateSelectedPeriodStats(filtered) {
+      const totalHours = filtered.reduce((sum, e) => sum + e.hours, 0);
+      const expected = Math.max(40, Math.floor(filtered.length / 7) * 40);
 
       document.getElementById("thisWeekHours").textContent = totalHours.toFixed(1);
-      document.getElementById("expectedHours").textContent = expectedHours;
+      document.getElementById("expectedHours").textContent = expected;
 
-      const percent = Math.min(100, (totalHours / expectedHours) * 100);
+      const percent = Math.min(100, (totalHours / expected) * 100);
       document.getElementById("weekProgress").style.width = percent + "%";
-      let statusMsg = totalHours >= expectedHours ? "✅ Goal met!" : `❌ ${Math.round(expectedHours - totalHours)} hrs short.`;
-      if (totalHours > expectedHours) statusMsg = `➕ ${Math.round(totalHours - expectedHours)} hrs over.`;
-      document.getElementById("weekStatus").textContent = statusMsg;
+      let status = totalHours >= expected
+        ? "✅ Goal met!"
+        : `❌ ${Math.round(expected - totalHours)} hrs short.`;
+      if (totalHours > expected) status = `➕ ${Math.round(totalHours - expected)} hrs over.`;
+      document.getElementById("weekStatus").textContent = status;
 
-      if (window.donutChart) window.donutChart.destroy();
+      if (window.donutChart instanceof Chart) window.donutChart.destroy();
       window.donutChart = new Chart(document.getElementById("donutChart"), {
         type: "doughnut",
         data: {
           labels: ["Worked", "Remaining"],
-          datasets: [{ data: [totalHours, Math.max(0, expectedHours - totalHours)], backgroundColor: ["#0d6efd", "#dee2e6"], borderWidth: 1 }]
+          datasets: [{ data: [totalHours, Math.max(0, expected - totalHours)], backgroundColor: ["#0d6efd", "#dee2e6"] }]
         },
         options: { cutout: "75%", plugins: { legend: { display: false } } }
       });
 
       const dailyHours = Array(7).fill(0);
-      filteredEntries.forEach(e => dailyHours[e.date.getDay()] += e.hours);
-      if (window.barChart) window.barChart.destroy();
+      filtered.forEach(e => dailyHours[new Date(e.date).getDay()] += e.hours);
+      if (window.barChart instanceof Chart) window.barChart.destroy();
       window.barChart = new Chart(document.getElementById("weeklyBarChart"), {
         type: "bar",
         data: { labels: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], datasets: [{ label: "Hours", data: dailyHours, backgroundColor: "#0d6efd" }] }
       });
     }
 
-    function updateGlobalStats(allEntries) {
-      const globalTotal = allEntries.reduce((sum, e) => sum + e.hours, 0);
-
+    function updateGlobalStats(entries) {
+      const globalTotal = entries.reduce((sum, e) => sum + e.hours, 0);
       const groupedWeeks = {};
-      allEntries.forEach(e => {
-        const weekStart = getWeekStart(e.date);
-        const key = weekStart.toISOString().slice(0, 10);
-        if (!groupedWeeks[key]) groupedWeeks[key] = 0;
-        groupedWeeks[key] += e.hours;
+      entries.forEach(e => {
+        const wk = getWeekStart(new Date(e.date)).toISOString().slice(0, 10);
+        groupedWeeks[wk] = (groupedWeeks[wk] || 0) + e.hours;
       });
 
       const totalWeeks = Math.max(1, Object.keys(groupedWeeks).length);
       const avgWeek = globalTotal / totalWeeks;
-      const avgDay = allEntries.length ? globalTotal / allEntries.length : 0;
-      const maxDay = allEntries.length ? Math.max(...allEntries.map(e => e.hours)) : 0;
-      const goalWeeks = Object.values(groupedWeeks).filter(h => h >= 40).length;
+      const avgDay = entries.length ? globalTotal / entries.length : 0;
+      const maxDay = Math.max(...entries.map(e => e.hours));
+      const goalWeeks = Object.values(groupedWeeks).filter(v => v >= 40).length;
 
       document.getElementById("globalTotal").textContent = globalTotal.toFixed(1);
       document.getElementById("weeksTracked").textContent = totalWeeks;
@@ -180,21 +178,21 @@
       document.getElementById("maxDay").textContent = maxDay.toFixed(1);
       document.getElementById("goalWeeks").textContent = goalWeeks;
 
-      const weekLabels = Object.keys(groupedWeeks);
-      const weekValues = weekLabels.map(k => groupedWeeks[k]);
-      if (window.lineChart) window.lineChart.destroy();
+      const labels = Object.keys(groupedWeeks);
+      const values = labels.map(l => groupedWeeks[l]);
+      if (window.lineChart instanceof Chart) window.lineChart.destroy();
       window.lineChart = new Chart(document.getElementById("trendLineChart"), {
         type: "line",
-        data: { labels: weekLabels, datasets: [{ label: "Weekly Hours", data: weekValues, borderColor: "#198754", fill: false }] }
+        data: { labels, datasets: [{ label: "Weekly Hours", data: values, borderColor: "#198754", fill: false }] }
       });
     }
 
     db.ref("entries").on("value", snapshot => {
       const data = snapshot.val() || {};
-      allEntries = Object.values(data).map(d => ({ ...d, date: new Date(d.date) }));
-      const thisSunday = getWeekStart(new Date());
-      const defaultWeek = allEntries.filter(e => getWeekStart(e.date).getTime() === thisSunday.getTime());
-      updateSelectedPeriodStats(defaultWeek);
+      allEntries = Object.values(data).map(d => ({ ...d, date: d.date, hours: +d.hours }));
+      const currentWeek = getWeekStart(new Date()).toISOString().slice(0, 10);
+      const filtered = allEntries.filter(e => getWeekStart(new Date(e.date)).toISOString().slice(0, 10) === currentWeek);
+      updateSelectedPeriodStats(filtered);
       updateGlobalStats(allEntries);
     });
 
@@ -202,15 +200,15 @@
       e.preventDefault();
       const start = new Date(document.getElementById("startDate").value);
       const end = new Date(document.getElementById("endDate").value);
-      if (!start || !end || start > end) return alert("Please select a valid date range.");
-      const filtered = allEntries.filter(e => e.date >= start && e.date <= end);
+      if (!start || !end || start > end) return alert("Invalid range");
+      const filtered = allEntries.filter(e => new Date(e.date) >= start && new Date(e.date) <= end);
       updateSelectedPeriodStats(filtered);
     });
 
     resetBtn.addEventListener("click", () => {
-      const thisSunday = getWeekStart(new Date());
-      const defaultWeek = allEntries.filter(e => getWeekStart(e.date).getTime() === thisSunday.getTime());
-      updateSelectedPeriodStats(defaultWeek);
+      const currentWeek = getWeekStart(new Date()).toISOString().slice(0, 10);
+      const filtered = allEntries.filter(e => getWeekStart(new Date(e.date)).toISOString().slice(0, 10) === currentWeek);
+      updateSelectedPeriodStats(filtered);
       document.getElementById("startDate").value = "";
       document.getElementById("endDate").value = "";
     });
