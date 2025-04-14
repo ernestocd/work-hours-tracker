@@ -224,13 +224,19 @@
     });
 
     filterForm.addEventListener("submit", e => {
-      e.preventDefault();
-      const start = new Date(document.getElementById("startDate").value);
-      const end = new Date(document.getElementById("endDate").value);
-      if (!start || !end || start > end) return alert("Invalid range");
-      const filtered = allEntries.filter(e => new Date(e.date) >= start && new Date(e.date) <= end);
-      updateSelectedPeriodStats(filtered);
+    e.preventDefault();
+    const start = new Date(document.getElementById("startDate").value);
+    const end = new Date(document.getElementById("endDate").value);
+    if (!start || !end || start > end) return alert("Invalid range");
+  
+    const filtered = allEntries.filter(e => {
+      const date = new Date(e.date);
+      return date >= start && date <= end;
     });
+  
+    updateSelectedPeriodStats(filtered);
+    updateGlobalStats(filtered); // 🟢 Add this line to update the trend line chart
+  });
 
     resetBtn.addEventListener("click", () => {
       const currentWeek = getWeekStart(new Date()).toISOString().slice(0, 10);
