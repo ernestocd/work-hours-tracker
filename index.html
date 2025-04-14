@@ -10,6 +10,8 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cal-heatmap@4.0.0/cal-heatmap.css" />
+  <script src="https://cdn.jsdelivr.net/npm/cal-heatmap@4.0.0/cal-heatmap.min.js"></script>
   <style>
     body { padding: 2rem; background: #f8f9fa; }
     .stat-box { border-radius: 12px; background: white; box-shadow: 0 0 10px rgba(0,0,0,0.05); padding: 1rem; margin-bottom: 1rem; }
@@ -127,6 +129,14 @@
       </div>
     </div>
   </div>
+
+    <div class="row mt-4">
+    <div class="col-md-12 stat-box">
+      <h5>Calendar Heatmap</h5>
+      <div id="calendar-heatmap"></div>
+    </div>
+  </div>
+
 
   <script>
     // Firebase configuration
@@ -540,6 +550,52 @@
         document.getElementById("weekStatus").textContent = "Error loading data";
       }
     });
+
+    function renderCalendarHeatmap(entries) {
+  const data = {};
+
+  entries.forEach(e => {
+    const timestamp = Math.floor(new Date(e.date).getTime() / 1000);
+    data[timestamp] = (data[timestamp] || 0) + e.hours;
+  });
+
+  const cal = new CalHeatmap();
+  cal.paint({
+    itemSelector: "#calendar-heatmap",
+    domain: "month",
+    subDomain: "day",
+    range: 6,
+    data: {
+      source: () => Promise.resolve(data),
+      type: "json",
+    },
+    legend: [2, 4, 6, 8, 10],
+    scale: {
+      color: {
+        type: "linear",
+        scheme: "Blues",
+      },
+    },
+  });
+}
+db.ref("entries").on("value", snapshot => {
+  try {
+    const data = snapshot.val() || {};
+    allEntries = Object.entries(data).map(([id, entry]) => ({
+      id,
+      date: entry.date,
+      hours: parseFloat(entry.hours)
+    }));
+    renderTable(allEntries);
+    updateSelectedPeriodStats(allEntries);
+    updateGlobalStats(allEntries);
+    renderCalendarHeatmap(allEntries);  // ← Add this line
+  } catch (error) {
+    console.error("Error loading entries:", error);
+    document.getElementById("weekStatus").textContent = "Error loading data";
+  }
+});
+
   </script>
 </body>
 </html>
