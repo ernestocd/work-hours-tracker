@@ -369,29 +369,20 @@
     function updateGlobalStats(entries, startDate = null, endDate = null) {
       const globalTotal = entries.reduce((sum, e) => sum + e.hours, 0);
       const weeks = {};
-      const daysPerWeek = {};
+      const uniqueDays = new Set();
 
       entries.forEach(e => {
         const weekStart = getWeekStart(new Date(e.date)).toISOString().split("T")[0];
         weeks[weekStart] = (weeks[weekStart] || 0) + e.hours;
-        // Track unique days per week
-        if (!daysPerWeek[weekStart]) {
-          daysPerWeek[weekStart] = new Set();
-        }
-        daysPerWeek[weekStart].add(e.date);
+        uniqueDays.add(e.date); // Track unique dates
       });
 
       const totalWeeks = startDate && endDate
         ? countWeeksInRange(startDate, endDate)
         : Object.keys(weeks).length || 1;
 
-      // Calculate average days worked per week
-      let totalDaysWorked = 0;
-      Object.values(daysPerWeek).forEach(days => {
-        totalDaysWorked += days.size;
-      });
-      const avgDaysWorked = totalWeeks > 0 ? Math.round(totalDaysWorked / totalWeeks) : 0;
-      const daysWorkedDisplay = `${avgDaysWorked}/7`;
+      const totalPossibleDays = totalWeeks * 7; // 7 days per week
+      const daysWorked = uniqueDays.size;
 
       const avgWeek = totalWeeks > 0 ? globalTotal / totalWeeks : 0;
       const avgDay = entries.length > 0 ? globalTotal / entries.length : 0;
@@ -404,7 +395,7 @@
       document.getElementById("avgDay").textContent = avgDay.toFixed(1);
       document.getElementById("maxDay").textContent = maxDay.toFixed(1);
       document.getElementById("goalWeeks").textContent = goalWeeks;
-      document.getElementById("daysWorked").textContent = daysWorkedDisplay;
+      document.getElementById("daysWorked").textContent = `${daysWorked}/${totalPossibleDays}`;
 
       // Trend line chart
       const labels = Object.keys(weeks).sort();
