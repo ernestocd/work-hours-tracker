@@ -21,7 +21,31 @@
   <div class="container">
     <h1 class="mb-4">📊 Work Hours Tracker</h1>
 
-    <!-- rest of your form and stat boxes stay unchanged -->
+    <div class="row">
+      <div class="col-md-4 stat-box">
+        <h5>Selected Period</h5>
+        <p><strong id="thisWeekHours">0</strong> / <span id="expectedHours">40</span> hrs</p>
+        <div class="progress mb-2">
+          <div id="weekProgress" class="progress-bar" role="progressbar" style="width: 0%;"></div>
+        </div>
+        <p id="weekStatus" class="text-muted small"></p>
+        <canvas id="donutChart"></canvas>
+      </div>
+
+      <div class="col-md-4 stat-box">
+        <h5>Global Stats</h5>
+        <p>Total Hours: <strong id="globalTotal">0</strong></p>
+        <p>Weeks Tracked: <strong id="weeksTracked">0</strong></p>
+        <p>Global Avg/Week: <strong id="globalAvg">0</strong></p>
+        <p>Successful Weeks: <strong id="goalWeeks">0</strong></p>
+      </div>
+
+      <div class="col-md-4 stat-box">
+        <h5>Daily Insights</h5>
+        <p>Longest Day: <strong id="maxDay">0 hrs</strong></p>
+        <p>Avg/Day: <strong id="avgDay">0</strong></p>
+      </div>
+    </div>
 
     <div class="row mt-4">
       <div class="col-md-6">
@@ -57,6 +81,67 @@
       d.setUTCDate(d.getUTCDate() - day);
       d.setUTCHours(0, 0, 0, 0);
       return d;
+    }
+
+    function updateGlobalStats(entries) {
+      const globalTotal = entries.reduce((sum, e) => sum + e.hours, 0);
+      const groupedWeeks = {};
+      entries.forEach(e => {
+        const wk = getWeekStart(new Date(e.date)).toISOString().slice(0, 10);
+        groupedWeeks[wk] = (groupedWeeks[wk] || 0) + e.hours;
+      });
+
+      const totalWeeks = Math.max(1, Object.keys(groupedWeeks).length);
+      const avgWeek = globalTotal / totalWeeks;
+      const avgDay = entries.length ? globalTotal / entries.length : 0;
+      const maxDay = Math.max(...entries.map(e => e.hours));
+      const goalWeeks = Object.values(groupedWeeks).filter(v => v >= 40).length;
+
+      document.getElementById("globalTotal").textContent = globalTotal.toFixed(1);
+      document.getElementById("weeksTracked").textContent = totalWeeks;
+      document.getElementById("globalAvg").textContent = avgWeek.toFixed(1);
+      document.getElementById("avgDay").textContent = avgDay.toFixed(1);
+      document.getElementById("maxDay").textContent = maxDay.toFixed(1);
+      document.getElementById("goalWeeks").textContent = goalWeeks;
+    }
+
+    function updateCharts(entries) {
+      const groupedWeeks = {};
+      const currentWeek = getWeekStart(new Date()).toISOString().slice(0, 10);
+      const dailyHours = Array(7).fill(0);
+
+      entries.forEach(e => {
+        const wk = getWeekStart(new Date(e.date)).toISOString().slice(0, 10);
+        groupedWeeks[wk] = (groupedWeeks[wk] || 0) + e.hours;
+        if (wk === currentWeek) {
+          const day = new Date(e.date).getUTCDay();
+          dailyHours[day] += e.hours;
+        }
+      });
+
+      const totalWeekHours = dailyHours.reduce((a, b) => a + b, 0);
+      document.getElementById("thisWeekHours").textContent = totalWeekHours.toFixed(1);
+      document.getElementById("expectedHours").textContent = "40";
+      document.getElementById("weekProgress").style.width = `${Math.min(100, (totalWeekHours / 40) * 100)}%`;
+      document.getElementById("weekStatus").textContent = totalWeekHours >= 40 ? "✅ Goal met!" : `❌ ${Math.round(40 - totalWeekHours)} hrs short.`;
+
+      if (window.barChart instanceof Chart) window.barChart.destroy();
+      window.barChart = new Chart(document.getElementById("weeklyBarChart"), {
+        type: "bar",
+        data: { labels: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], datasets: [{ label: "Hours", data: dailyHours, backgroundColor: "#0d6efd" }] }
+      });
+
+      if (window.donutChart instanceof Chart) window.donutChart.destroy();
+      window.donutChart = new Chart(document.getElementById("donutChart"), {
+        type: "doughnut",
+        data: {
+          labels: ["Worked", "Remaining"],
+          datasets: [{ data: [totalWeekHours, Math.max(0, 40 - totalWeekHours)], backgroundColor: ["#0d6efd", "#dee2e6"] }]
+        },
+        options: { cutout: "75%", plugins: { legend: { display: false } } }
+      });
+
+      updateLineChart(groupedWeeks);
     }
 
     function updateLineChart(dataObj) {
@@ -134,12 +219,8 @@
     db.ref("entries").on("value", snapshot => {
       const data = snapshot.val() || {};
       allEntries = Object.values(data).map(d => ({ ...d, date: d.date, hours: +d.hours }));
-      const groupedWeeks = {};
-      allEntries.forEach(e => {
-        const wk = getWeekStart(new Date(e.date)).toISOString().slice(0, 10);
-        groupedWeeks[wk] = (groupedWeeks[wk] || 0) + e.hours;
-      });
-      updateLineChart(groupedWeeks);
+      updateCharts(allEntries);
+      updateGlobalStats(allEntries);
     });
   </script>
 </body>
