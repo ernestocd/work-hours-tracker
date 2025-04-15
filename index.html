@@ -16,7 +16,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
   <style>
-    body { padding: 2rem; background: #f8f9fa; }
+    body { padding: 1rem; background: #f8f9fa; }
     .stat-box { border-radius: 12px; background: white; box-shadow: 0 0 10px rgba(0,0,0,0.05); padding: 1rem; margin-bottom: 1rem; }
     .table-container { max-height: 300px; overflow-y: auto; margin-bottom: 2rem; display: none; }
     .table th, .table td { vertical-align: middle; }
@@ -24,8 +24,8 @@
     @keyframes highlight { 0% { background-color: #d4edda; } 100% { background-color: transparent; } }
     .editable:hover { background-color: #f1f1f1; cursor: pointer; }
     .btn-sm { padding: 0.25rem 0.5rem; }
-    #calendar-heatmap, #weekly-bar-chart, #trend-line-chart { height: 300px; width: 100%; }
-    #heatmap-stats-pie, #worked-vs-not-worked-chart { height: 200px; width: 100%; }
+    #calendar-heatmap, #weekly-bar-chart, #trend-line-chart { height: 350px; width: 100%; }
+    #heatmap-stats-pie, #worked-vs-not-worked-chart { height: 250px; width: 100%; }
     .chart-container { position: relative; }
     .chart-maximized {
       position: fixed;
@@ -42,7 +42,7 @@
     .chart-maximized #weekly-bar-chart,
     .chart-maximized #trend-line-chart,
     .chart-maximized #heatmap-stats-pie {
-      height: calc(100vh - 150px);
+      height: calc(100vh - 120px);
       width: 100%;
     }
     .chart-maximized .maximize-btn { display: none; }
@@ -66,14 +66,18 @@
       top: 0;
       z-index: 999;
       background: #f8f9fa;
-      padding: 1rem 0;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid #dee2e6;
     }
-    .week-nav-btn { width: 40px; }
+    .filter-sticky .row { align-items: center; }
+    .filter-sticky .form-control { height: 2rem; font-size: 0.9rem; }
+    .week-nav-btn { width: 2rem; height: 2rem; padding: 0; font-size: 0.9rem; }
+    .action-btn { width: 2.5rem; height: 2.5rem; padding: 0; font-size: 0.9rem; }
     @media (max-width: 576px) {
-      body { padding: 1rem; }
+      body { padding: 0.5rem; }
       .btn-sm { font-size: 0.75rem; }
-      #calendar-heatmap, #weekly-bar-chart, #trend-line-chart { height: 200px; }
-      #heatmap-stats-pie, #worked-vs-not-worked-chart { height: 150px; }
+      #calendar-heatmap, #weekly-bar-chart, #trend-line-chart { height: 300px; }
+      #heatmap-stats-pie, #worked-vs-not-worked-chart { height: 200px; }
       .chart-maximized {
         padding: 0.5rem;
       }
@@ -81,52 +85,38 @@
       .chart-maximized #weekly-bar-chart,
       .chart-maximized #trend-line-chart,
       .chart-maximized #heatmap-stats-pie {
-        height: calc(100vh - 140px);
+        height: calc(100vh - 100px);
       }
-      .week-nav-btn { width: 35px; font-size: 0.8rem; }
-      .week-nav-container {
-        display: flex;
-        justify-content: space-between;
-        width: 100%;
-      }
-      #prevWeekNavBtn { margin-right: auto; }
-      #nextWeekNavBtn { margin-left: auto; }
-      .filter-sticky { padding: 0.5rem 0; }
-      .filter-sticky .row > div { margin-bottom: 0.5rem; }
-      .filter-sticky .btn { font-size: 0.8rem; padding: 0.4rem; }
+      .filter-sticky { padding: 0.3rem 0; }
+      .filter-sticky .form-control { height: 1.8rem; font-size: 0.8rem; }
+      .week-nav-btn { width: 1.8rem; height: 1.8rem; font-size: 0.8rem; }
+      .action-btn { width: 2rem; height: 2rem; font-size: 0.8rem; }
+      .filter-sticky .row > div { margin-bottom: 0.2rem; }
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1 class="mb-4">📊 Work Hours Tracker</h1>
+    <h1 class="mb-3">📊 Work Hours Tracker</h1>
 
     <div class="filter-sticky">
-      <form id="filterForm" class="mb-2">
-        <div class="row g-2 align-items-end">
-          <div class="col-md-3">
-            <label for="startDate">Start Date</label>
-            <input type="date" id="startDate" class="form-control" aria-label="Start Date" />
+      <form id="filterForm">
+        <div class="row g-1 align-items-center">
+          <div class="col-5 col-md-3">
+            <input type="date" id="startDate" class="form-control" placeholder="Start Date" aria-label="Start Date" />
           </div>
-          <div class="col-md-3">
-            <label for="endDate">End Date</label>
-            <input type="date" id="endDate" class="form-control" aria-label="End Date" />
+          <div class="col-5 col-md-3">
+            <input type="date" id="endDate" class="form-control" placeholder="End Date" aria-label="End Date" />
           </div>
-          <div class="col-md-2 col-6 week-nav-container">
-            <button type="button" id="prevWeekNavBtn" class="btn btn-outline-primary week-nav-btn" title="Previous Week">←</button>
+          <div class="col-2 col-md-1 d-flex">
+            <button type="button" id="prevWeekNavBtn" class="btn btn-outline-primary week-nav-btn me-1" title="Previous Week">←</button>
             <button type="button" id="nextWeekNavBtn" class="btn btn-outline-primary week-nav-btn" title="Next Week">→</button>
           </div>
-          <div class="col-md-1 col-3">
-            <button type="submit" class="btn btn-secondary w-100">Filter</button>
-          </div>
-          <div class="col-md-1 col-3">
-            <button type="button" id="resetBtn" class="btn btn-outline-secondary w-100">Reset</button>
-          </div>
-          <div class="col-md-1 col-3">
-            <button type="button" id="currentWeekBtn" class="btn btn-outline-primary w-100">Current Week</button>
-          </div>
-          <div class="col-md-1 col-3">
-            <button type="button" id="toggleTableBtn" class="btn btn-outline-primary w-100">Show Table</button>
+          <div class="col-12 col-md-5 d-flex justify-content-end">
+            <button type="submit" class="btn btn-secondary action-btn me-1" title="Filter">🔍</button>
+            <button type="button" id="resetBtn" class="btn btn-outline-secondary action-btn me-1" title="Reset">⟳</button>
+            <button type="button" id="currentWeekBtn" class="btn btn-outline-primary action-btn me-1" title="Current Week">📅</button>
+            <button type="button" id="toggleTableBtn" class="btn btn-outline-primary action-btn" title="Show/Hide Table">📋</button>
           </div>
         </div>
       </form>
@@ -737,7 +727,7 @@
         elements.toggleTableBtn.addEventListener("click", () => {
           const isHidden = elements.tableContainer.style.display === "none";
           elements.tableContainer.style.display = isHidden ? "block" : "none";
-          elements.toggleTableBtn.textContent = isHidden ? "Hide Table" : "Show Table";
+          elements.toggleTableBtn.setAttribute("title", isHidden ? "Hide Table" : "Show Table");
         });
       }
 
@@ -958,7 +948,7 @@
       if (elements.exportExcelBtn) {
         elements.exportExcelBtn.addEventListener("click", () => {
           const ws = XLSX.utils.json_to_sheet(filteredEntries.map(e => ({ Date: e.date, Hours: e.hours })));
-          const wbзы = XLSX.utils.book_new();
+          const wb = XLSX.utils.book_new();
           XLSX.utils.book_append_sheet(wb, ws, "Work Hours");
           XLSX.writeFile(wb, "work_hours.xlsx");
         });
