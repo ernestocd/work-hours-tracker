@@ -62,6 +62,7 @@
       width: 100%;
       margin-top: 1rem;
     }
+    .week-nav-btn { width: 40px; }
     @media (max-width: 576px) {
       body { padding: 1rem; }
       .btn-sm { font-size: 0.75rem; }
@@ -75,6 +76,7 @@
       #heatmap-stats-pie, #worked-vs-not-worked-chart {
         height: 150px;
       }
+      .week-nav-btn { width: 30px; font-size: 0.8rem; }
     }
   </style>
 </head>
@@ -106,16 +108,22 @@
           <label for="endDate">End Date</label>
           <input type="date" id="endDate" class="form-control" aria-label="End Date" />
         </div>
-        <div class="col-md-2">
+        <div class="col-md-1 d-flex align-items-end">
+          <button type="button" id="prevWeekNavBtn" class="btn btn-outline-primary week-nav-btn" title="Previous Week">&larr;</button>
+        </div>
+        <div class="col-md-1 d-flex align-items-end">
+          <button type="button" id="nextWeekNavBtn" class="btn btn-outline-primary week-nav-btn" title="Next Week">&rarr;</button>
+        </div>
+        <div class="col-md-1 d-flex align-items-end">
           <button type="submit" class="btn btn-secondary w-100">Filter</button>
         </div>
-        <div class="col-md-2">
+        <div class="col-md-1 d-flex align-items-end">
           <button type="button" id="resetBtn" class="btn btn-outline-secondary w-100">Reset</button>
         </div>
-        <div class="col-md-1">
+        <div class="col-md-1 d-flex align-items-end">
           <button type="button" id="currentWeekBtn" class="btn btn-outline-primary w-100">Current Week</button>
         </div>
-        <div class="col-md-1">
+        <div class="col-md-1 d-flex align-items-end">
           <button type="button" id="prevWeekBtn" class="btn btn-outline-primary w-100">Previous Week</button>
         </div>
       </div>
@@ -256,7 +264,9 @@
         minimizeCalendarBtn: document.getElementById("minimizeCalendarBtn"),
         rotateCalendarBtn: document.getElementById("rotateCalendarBtn"),
         heatmapStatsPie: document.getElementById("heatmap-stats-pie"),
-        workedVsNotWorkedChart: document.getElementById("worked-vs-not-worked-chart")
+        workedVsNotWorkedChart: document.getElementById("worked-vs-not-worked-chart"),
+        prevWeekNavBtn: document.getElementById("prevWeekNavBtn"),
+        nextWeekNavBtn: document.getElementById("nextWeekNavBtn")
       };
 
       const getWeekStart = (date) => {
@@ -816,6 +826,52 @@
           updateUI(filtered);
           updateSelectedPeriodStats(filtered, prevWeekStart, prevWeekEnd);
           updateGlobalStats(filtered, prevWeekStart, prevWeekEnd);
+        });
+      }
+
+      if (elements.prevWeekNavBtn) {
+        elements.prevWeekNavBtn.addEventListener("click", () => {
+          const startDate = elements.startDateInput.value || formatDateForInput(new Date());
+          const weekStart = getWeekStart(new Date(startDate));
+          const prevWeekStart = new Date(weekStart);
+          prevWeekStart.setDate(prevWeekStart.getDate() - 7);
+          const prevWeekEnd = new Date(prevWeekStart);
+          prevWeekEnd.setDate(prevWeekEnd.getDate() + 6);
+          prevWeekEnd.setHours(23, 59, 59, 999);
+
+          elements.startDateInput.value = formatDateForInput(prevWeekStart);
+          elements.endDateInput.value = formatDateForInput(prevWeekEnd);
+
+          const filtered = allEntries.filter(e => {
+            const date = new Date(e.date);
+            return date >= prevWeekStart && date <= prevWeekEnd;
+          });
+          updateUI(filtered);
+          updateSelectedPeriodStats(filtered, prevWeekStart, prevWeekEnd);
+          updateGlobalStats(filtered, prevWeekStart, prevWeekEnd);
+        });
+      }
+
+      if (elements.nextWeekNavBtn) {
+        elements.nextWeekNavBtn.addEventListener("click", () => {
+          const startDate = elements.startDateInput.value || formatDateForInput(new Date());
+          const weekStart = getWeekStart(new Date(startDate));
+          const nextWeekStart = new Date(weekStart);
+          nextWeekStart.setDate(nextWeekStart.getDate() + 7);
+          const nextWeekEnd = new Date(nextWeekStart);
+          nextWeekEnd.setDate(nextWeekEnd.getDate() + 6);
+          nextWeekEnd.setHours(23, 59, 59, 999);
+
+          elements.startDateInput.value = formatDateForInput(nextWeekStart);
+          elements.endDateInput.value = formatDateForInput(nextWeekEnd);
+
+          const filtered = allEntries.filter(e => {
+            const date = new Date(e.date);
+            return date >= nextWeekStart && date <= nextWeekEnd;
+          });
+          updateUI(filtered);
+          updateSelectedPeriodStats(filtered, nextWeekStart, nextWeekEnd);
+          updateGlobalStats(filtered, nextWeekStart, nextWeekEnd);
         });
       }
 
