@@ -109,10 +109,10 @@
           <input type="date" id="endDate" class="form-control" aria-label="End Date" />
         </div>
         <div class="col-md-1 d-flex align-items-end">
-          <button type="button" id="prevWeekNavBtn" class="btn btn-outline-primary week-nav-btn" title="Previous Week">&larr;</button>
+          <button type="button" id="prevWeekNavBtn" class="btn btn-outline-primary week-nav-btn" title="Previous Week">←</button>
         </div>
         <div class="col-md-1 d-flex align-items-end">
-          <button type="button" id="nextWeekNavBtn" class="btn btn-outline-primary week-nav-btn" title="Next Week">&rarr;</button>
+          <button type="button" id="nextWeekNavBtn" class="btn btn-outline-primary week-nav-btn" title="Next Week">→</button>
         </div>
         <div class="col-md-1 d-flex align-items-end">
           <button type="submit" class="btn btn-secondary w-100">Filter</button>
@@ -123,7 +123,7 @@
         <div class="col-md-1 d-flex align-items-end">
           <button type="button" id="currentWeekBtn" class="btn btn-outline-primary w-100">Current Week</button>
         </div>
-        <div class="col-md-1 d-flex align-items-end">
+        <div class="col-md-1 d-flex align-items-end_png">
           <button type="button" id="prevWeekBtn" class="btn btn-outline-primary w-100">Previous Week</button>
         </div>
       </div>
@@ -264,9 +264,7 @@
         minimizeCalendarBtn: document.getElementById("minimizeCalendarBtn"),
         rotateCalendarBtn: document.getElementById("rotateCalendarBtn"),
         heatmapStatsPie: document.getElementById("heatmap-stats-pie"),
-        workedVsNotWorkedChart: document.getElementById("worked-vs-not-worked-chart"),
-        prevWeekNavBtn: document.getElementById("prevWeekNavBtn"),
-        nextWeekNavBtn: document.getElementById("nextWeekNavBtn")
+        workedVsNotWorkedChart: document.getElementById("worked-vs-not-worked-chart")
       };
 
       const getWeekStart = (date) => {
@@ -441,7 +439,6 @@
         elements.goalWeeks.textContent = goalWeeks;
         elements.daysWorked.textContent = `${daysWorked}/${totalPossibleDays}`;
 
-        // Calculate Worked vs Not Worked with percentages
         const daysNotWorked = entries.filter(e => e.hours === 0).length;
         const daysWorkedCount = daysWorked;
         const totalEntries = entries.length;
@@ -615,7 +612,6 @@
           else if (hours > 8) stats.eightPlus++;
         });
 
-        // Calculate percentages for Heatmap Statistics
         const totalEntries = entries.length;
         const zeroPercent = totalEntries > 0 ? Math.round((stats.zero / totalEntries) * 100) : 0;
         const zeroToTwoPercent = totalEntries > 0 ? Math.round((stats.zeroToTwo / totalEntries) * 100) : 0;
@@ -829,52 +825,6 @@
         });
       }
 
-      if (elements.prevWeekNavBtn) {
-        elements.prevWeekNavBtn.addEventListener("click", () => {
-          const startDate = elements.startDateInput.value || formatDateForInput(new Date());
-          const weekStart = getWeekStart(new Date(startDate));
-          const prevWeekStart = new Date(weekStart);
-          prevWeekStart.setDate(prevWeekStart.getDate() - 7);
-          const prevWeekEnd = new Date(prevWeekStart);
-          prevWeekEnd.setDate(prevWeekEnd.getDate() + 6);
-          prevWeekEnd.setHours(23, 59, 59, 999);
-
-          elements.startDateInput.value = formatDateForInput(prevWeekStart);
-          elements.endDateInput.value = formatDateForInput(prevWeekEnd);
-
-          const filtered = allEntries.filter(e => {
-            const date = new Date(e.date);
-            return date >= prevWeekStart && date <= prevWeekEnd;
-          });
-          updateUI(filtered);
-          updateSelectedPeriodStats(filtered, prevWeekStart, prevWeekEnd);
-          updateGlobalStats(filtered, prevWeekStart, prevWeekEnd);
-        });
-      }
-
-      if (elements.nextWeekNavBtn) {
-        elements.nextWeekNavBtn.addEventListener("click", () => {
-          const startDate = elements.startDateInput.value || formatDateForInput(new Date());
-          const weekStart = getWeekStart(new Date(startDate));
-          const nextWeekStart = new Date(weekStart);
-          nextWeekStart.setDate(nextWeekStart.getDate() + 7);
-          const nextWeekEnd = new Date(nextWeekStart);
-          nextWeekEnd.setDate(nextWeekEnd.getDate() + 6);
-          nextWeekEnd.setHours(23, 59, 59, 999);
-
-          elements.startDateInput.value = formatDateForInput(nextWeekStart);
-          elements.endDateInput.value = formatDateForInput(nextWeekEnd);
-
-          const filtered = allEntries.filter(e => {
-            const date = new Date(e.date);
-            return date >= nextWeekStart && date <= nextWeekEnd;
-          });
-          updateUI(filtered);
-          updateSelectedPeriodStats(filtered, nextWeekStart, nextWeekEnd);
-          updateGlobalStats(filtered, nextWeekStart, nextWeekEnd);
-        });
-      }
-
       if (elements.exportCsvBtn) {
         elements.exportCsvBtn.addEventListener("click", () => {
           const csv = ["Date,Hours"];
@@ -913,6 +863,80 @@
           elements.weekStatus.textContent = "Error loading data";
         }
       });
+    });
+  </script>
+
+  <!-- Enhancement Script for Navigation -->
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const prevWeekNavBtn = document.getElementById("prevWeekNavBtn");
+      const nextWeekNavBtn = document.getElementById("nextWeekNavBtn");
+      const startDateInput = document.getElementById("startDate");
+      const endDateInput = document.getElementById("endDate");
+      const weekStatus = document.getElementById("weekStatus");
+
+      // Enhanced Previous Week Navigation
+      if (prevWeekNavBtn && startDateInput && endDateInput) {
+        prevWeekNavBtn.addEventListener("click", () => {
+          try {
+            // Use current input or today's date as fallback
+            const startDate = startDateInput.value || new Date().toISOString().split("T")[0];
+            const weekStart = new Date(startDate);
+            // Adjust to week start (Monday, consistent with getWeekStart)
+            weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 1) % 7));
+            // Move to previous week
+            const prevWeekStart = new Date(weekStart);
+            prevWeekStart.setDate(prevWeekStart.getDate() - 7);
+            const prevWeekEnd = new Date(prevWeekStart);
+            prevWeekEnd.setDate(prevWeekEnd.getDate() + 6);
+            prevWeekEnd.setHours(23, 59, 59, 999);
+
+            // Update input fields
+            startDateInput.value = prevWeekStart.toISOString().split("T")[0];
+            endDateInput.value = prevWeekEnd.toISOString().split("T")[0];
+
+            // Trigger filter form submission to update UI
+            const filterForm = document.getElementById("filterForm");
+            if (filterForm) {
+              filterForm.dispatchEvent(new Event("submit", { bubbles: true }));
+            }
+          } catch (error) {
+            console.error("Error navigating to previous week:", error);
+            if (weekStatus) {
+              weekStatus.textContent = "Error navigating to previous week";
+            }
+          }
+        });
+      }
+
+      // Enhanced Next Week Navigation (retained for consistency)
+      if (nextWeekNavBtn && startDateInput && endDateInput) {
+        nextWeekNavBtn.addEventListener("click", () => {
+          try {
+            const startDate = startDateInput.value || new Date().toISOString().split("T")[0];
+            const weekStart = new Date(startDate);
+            weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 1) % 7));
+            const nextWeekStart = new Date(weekStart);
+            nextWeekStart.setDate(nextWeekStart.getDate() + 7);
+            const nextWeekEnd = new Date(nextWeekStart);
+            nextWeekEnd.setDate(nextWeekEnd.getDate() + 6);
+            nextWeekEnd.setHours(23, 59, 59, 999);
+
+            startDateInput.value = nextWeekStart.toISOString().split("T")[0];
+            endDateInput.value = nextWeekEnd.toISOString().split("T")[0];
+
+            const filterForm = document.getElementById("filterForm");
+            if (filterForm) {
+              filterForm.dispatchEvent(new Event("submit", { bubbles: true }));
+            }
+          } catch (error) {
+            console.error("Error navigating to next week:", error);
+            if (weekStatus) {
+              weekStatus.textContent = "Error navigating to next week";
+            }
+          }
+        });
+      }
     });
   </script>
 </body>
