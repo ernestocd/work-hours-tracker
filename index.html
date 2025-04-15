@@ -18,7 +18,7 @@
   <style>
     body { padding: 2rem; background: #f8f9fa; }
     .stat-box { border-radius: 12px; background: white; box-shadow: 0 0 10px rgba(0,0,0,0.05); padding: 1rem; margin-bottom: 1rem; }
-    .table-container { max-height: 300px; overflow-y: auto; margin-bottom: 2rem; }
+    .table-container { max-height: 300px; overflow-y: auto; margin-bottom: 2rem; display: none; }
     .table th, .table td { vertical-align: middle; }
     .highlight { animation: highlight 1s ease-out; }
     @keyframes highlight { 0% { background-color: #d4edda; } 100% { background-color: transparent; } }
@@ -84,20 +84,6 @@
   <div class="container">
     <h1 class="mb-4">📊 Work Hours Tracker</h1>
 
-    <form id="entryForm" class="mb-4">
-      <div class="row g-2">
-        <div class="col-md-4">
-          <input type="date" id="date" class="form-control" required aria-label="Date" />
-        </div>
-        <div class="col-md-4">
-          <input type="number" id="hours" class="form-control" placeholder="Hours Worked" step="0.1" min="0" required aria-label="Hours" />
-        </div>
-        <div class="col-md-4">
-          <button type="submit" class="btn btn-primary w-100">Add Entry</button>
-        </div>
-      </div>
-    </form>
-
     <form id="filterForm" class="mb-4">
       <div class="row g-2 align-items-end">
         <div class="col-md-3">
@@ -129,7 +115,10 @@
       </div>
     </form>
 
-    <div class="table-container">
+    <div class="mb-3">
+      <button id="toggleTableBtn" class="btn btn-outline-primary">Show Table</button>
+    </div>
+    <div class="table-container" id="tableContainer">
       <table class="table table-bordered table-hover">
         <thead class="table-light">
           <tr>
@@ -245,7 +234,6 @@
       let isHeatmapStatsRotated = false;
 
       const elements = {
-        entryForm: document.getElementById("entryForm"),
         filterForm: document.getElementById("filterForm"),
         resetBtn: document.getElementById("resetBtn"),
         currentWeekBtn: document.getElementById("currentWeekBtn"),
@@ -253,13 +241,13 @@
         entriesTable: document.getElementById("entriesTable"),
         exportCsvBtn: document.getElementById("exportCsvBtn"),
         exportExcelBtn: document.getElementById("exportExcelBtn"),
-        dateInput: document.getElementById("date"),
-        hoursInput: document.getElementById("hours"),
         startDateInput: document.getElementById("startDate"),
         endDateInput: document.getElementById("endDate"),
         newDateInput: document.getElementById("newDate"),
         newHoursInput: document.getElementById("newHours"),
         addBtn: document.getElementById("addBtn"),
+        toggleTableBtn: document.getElementById("toggleTableBtn"),
+        tableContainer: document.getElementById("tableContainer"),
         thisWeekHours: document.getElementById("thisWeekHours"),
         expectedHours: document.getElementById("expectedHours"),
         weeksCount: document.getElementById("weeksCount"),
@@ -431,7 +419,7 @@
         });
         if (window.barChart instanceof Chart) window.barChart.destroy();
         window.barChart = new Chart(elements.weeklyBarChart, {
-          type: isWeeklyBarRotated ? "bar" : "bar",
+          type: "bar",
           data: {
             labels: isWeeklyBarRotated ? dailyHours : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
             datasets: [{
@@ -560,7 +548,6 @@
         if (!elements.calendarHeatmap) return console.error("calendarHeatmap not found");
         if (!elements.heatmapStatsPie) return console.error("heatmapStatsPie not found");
 
-        // Render Calendar Heatmap
         if (typeof echarts === "undefined") {
           console.error("ECharts is not available. Skipping heatmap rendering.");
           elements.calendarHeatmap.innerHTML = `
@@ -645,7 +632,6 @@
           `;
         }
 
-        // Render Heatmap Stats Pie Chart
         const stats = {
           zero: 0,
           zeroToTwo: 0,
@@ -733,6 +719,14 @@
         updateGlobalStats(entries);
         renderCalendarHeatmap(entries);
       };
+
+      if (elements.toggleTableBtn) {
+        elements.toggleTableBtn.addEventListener("click", () => {
+          const isHidden = elements.tableContainer.style.display === "none";
+          elements.tableContainer.style.display = isHidden ? "block" : "none";
+          elements.toggleTableBtn.textContent = isHidden ? "Hide Table" : "Show Table";
+        });
+      }
 
       if (elements.maximizeCalendarBtn) {
         elements.maximizeCalendarBtn.addEventListener("click", () => {
@@ -875,25 +869,6 @@
           window.lineChart.resize();
         }
       });
-
-      if (elements.entryForm) {
-        elements.entryForm.addEventListener("submit", async (e) => {
-          e.preventDefault();
-          const date = elements.dateInput.value;
-          const hours = parseFloat(elements.hoursInput.value);
-          if (!date || isNaN(hours) || hours < 0) {
-            elements.weekStatus.textContent = "Invalid date or hours";
-            return;
-          }
-          try {
-            await db.ref("entries").push({ date, hours });
-            elements.entryForm.reset();
-          } catch (error) {
-            console.error("Error saving entry:", error);
-            elements.weekStatus.textContent = "Error saving entry";
-          }
-        });
-      }
 
       if (elements.filterForm) {
         elements.filterForm.addEventListener("submit", (e) => {
