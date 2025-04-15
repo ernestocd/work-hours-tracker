@@ -24,9 +24,9 @@
     @keyframes highlight { 0% { background-color: #d4edda; } 100% { background-color: transparent; } }
     .editable:hover { background-color: #f1f1f1; cursor: pointer; }
     .btn-sm { padding: 0.25rem 0.5rem; }
-    #calendar-heatmap { height: 300px; width: 100%; }
-    .calendar-container { position: relative; }
-    .calendar-maximized {
+    #calendar-heatmap, #weekly-bar-chart, #trend-line-chart { height: 300px; width: 100%; }
+    .chart-container { position: relative; }
+    .chart-maximized {
       position: fixed;
       top: 0;
       left: 0;
@@ -37,13 +37,15 @@
       padding: 1rem;
       margin: 0;
     }
-    .calendar-maximized #calendar-heatmap {
+    .chart-maximized #calendar-heatmap,
+    .chart-maximized #weekly-bar-chart,
+    .chart-maximized #trend-line-chart {
       height: calc(100vh - 150px);
       width: 100%;
     }
-    .calendar-maximized .maximize-btn { display: none; }
-    .calendar-maximized .minimize-btn { display: block; }
-    .calendar-maximized .rotate-btn { display: block; }
+    .chart-maximized .maximize-btn { display: none; }
+    .chart-maximized .minimize-btn { display: block; }
+    .chart-maximized .rotate-btn { display: block; }
     .minimize-btn, .rotate-btn {
       display: none;
       position: fixed;
@@ -66,11 +68,13 @@
     @media (max-width: 576px) {
       body { padding: 1rem; }
       .btn-sm { font-size: 0.75rem; }
-      #calendar-heatmap { height: 200px; }
-      .calendar-maximized {
+      #calendar-heatmap, #weekly-bar-chart, #trend-line-chart { height: 200px; }
+      .chart-maximized {
         padding: 0.5rem;
       }
-      .calendar-maximized #calendar-heatmap {
+      .chart-maximized #calendar-heatmap,
+      .chart-maximized #weekly-bar-chart,
+      .chart-maximized #trend-line-chart {
         height: calc(100vh - 140px);
       }
       #heatmap-stats-pie, #worked-vs-not-worked-chart {
@@ -123,7 +127,7 @@
         <div class="col-md-1 d-flex align-items-end">
           <button type="button" id="currentWeekBtn" class="btn btn-outline-primary w-100">Current Week</button>
         </div>
-        <div class="col-md-1 d-flex align-items-end_png">
+        <div class="col-md-1 d-flex align-items-end">
           <button type="button" id="prevWeekBtn" class="btn btn-outline-primary w-100">Previous Week</button>
         </div>
       </div>
@@ -181,16 +185,24 @@
     </div>
 
     <div class="row mt-4">
-      <div class="col-md-6">
+      <div class="col-md-6 stat-box chart-container" id="weeklyBarContainer">
+        <h5>Weekly Hours Distribution</h5>
+        <button class="btn btn-outline-secondary btn-sm maximize-btn" id="maximizeWeeklyBarBtn">Maximize</button>
+        <button class="btn btn-outline-secondary btn-sm minimize-btn" id="minimizeWeeklyBarBtn">Minimize</button>
+        <button class="btn btn-outline-secondary btn-sm rotate-btn" id="rotateWeeklyBarBtn">Rotate</button>
         <canvas id="weeklyBarChart"></canvas>
       </div>
-      <div class="col-md-6">
+      <div class="col-md-6 stat-box chart-container" id="trendLineContainer">
+        <h5>Weekly Hours Trend</h5>
+        <button class="btn btn-outline-secondary btn-sm maximize-btn" id="maximizeTrendLineBtn">Maximize</button>
+        <button class="btn btn-outline-secondary btn-sm minimize-btn" id="minimizeTrendLineBtn">Minimize</button>
+        <button class="btn btn-outline-secondary btn-sm rotate-btn" id="rotateTrendLineBtn">Rotate</button>
         <canvas id="trendLineChart"></canvas>
       </div>
     </div>
 
     <div class="row mt-4">
-      <div class="col-md-12 stat-box calendar-container" id="calendarContainer">
+      <div class="col-md-12 stat-box chart-container" id="calendarContainer">
         <h5>Calendar Heatmap</h5>
         <button class="btn btn-outline-secondary btn-sm maximize-btn" id="maximizeCalendarBtn">Maximize</button>
         <button class="btn btn-outline-secondary btn-sm minimize-btn" id="minimizeCalendarBtn">Minimize</button>
@@ -198,7 +210,7 @@
         <div id="calendar-heatmap"></div>
         <canvas id="heatmap-stats-pie"></canvas>
       </div>
-    </div>
+   <|control637|>
   </div>
 
   <script>
@@ -226,6 +238,8 @@
       let heatmapStatsPie = null;
       let workedVsNotWorkedChart = null;
       let isCalendarRotated = false;
+      let isWeeklyBarRotated = false;
+      let isTrendLineRotated = false;
 
       const elements = {
         entryForm: document.getElementById("entryForm"),
@@ -264,7 +278,15 @@
         minimizeCalendarBtn: document.getElementById("minimizeCalendarBtn"),
         rotateCalendarBtn: document.getElementById("rotateCalendarBtn"),
         heatmapStatsPie: document.getElementById("heatmap-stats-pie"),
-        workedVsNotWorkedChart: document.getElementById("worked-vs-not-worked-chart")
+        workedVsNotWorkedChart: document.getElementById("worked-vs-not-worked-chart"),
+        weeklyBarContainer: document.getElementById("weeklyBarContainer"),
+        maximizeWeeklyBarBtn: document.getElementById("maximizeWeeklyBarBtn"),
+        minimizeWeeklyBarBtn: document.getElementById("minimizeWeeklyBarBtn"),
+        rotateWeeklyBarBtn: document.getElementById("rotateWeeklyBarBtn"),
+        trendLineContainer: document.getElementById("trendLineContainer"),
+        maximizeTrendLineBtn: document.getElementById("maximizeTrendLineBtn"),
+        minimizeTrendLineBtn: document.getElementById("minimizeTrendLineBtn"),
+        rotateTrendLineBtn: document.getElementById("rotateTrendLineBtn")
       };
 
       const getWeekStart = (date) => {
@@ -402,12 +424,22 @@
         });
         if (window.barChart instanceof Chart) window.barChart.destroy();
         window.barChart = new Chart(elements.weeklyBarChart, {
-          type: "bar",
+          type: isWeeklyBarRotated ? "bar" : "bar",
           data: {
-            labels: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-            datasets: [{ label: "Hours", data: dailyHours, backgroundColor: "#0d6efd" }]
+            labels: isWeeklyBarRotated ? dailyHours : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+            datasets: [{
+              label: "Hours",
+              data: isWeeklyBarRotated ? ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] : dailyHours,
+              backgroundColor: "#0d6efd",
+              axis: isWeeklyBarRotated ? "y" : "x"
+            }]
           },
-          options: { scales: { y: { beginAtZero: true } } }
+          options: {
+            indexAxis: isWeeklyBarRotated ? "y" : "x",
+            scales: {
+              [isWeeklyBarRotated ? "x" : "y"]: { beginAtZero: true }
+            }
+          }
         });
       };
 
@@ -477,17 +509,25 @@
         window.lineChart = new Chart(elements.trendLineChart, {
           type: "line",
           data: {
-            labels,
-            datasets: [{ label: "Weekly Hours", data, borderColor: "#198754", fill: false }]
+            labels: isTrendLineRotated ? data : labels,
+            datasets: [{
+              label: "Weekly Hours",
+              data: isTrendLineRotated ? labels : data,
+              borderColor: "#198754",
+              fill: false,
+              pointRadius: 4,
+              pointBackgroundColor: "#198754"
+            }]
           },
           options: {
+            indexAxis: isTrendLineRotated ? "y" : "x",
             plugins: {
               annotation: {
                 annotations: {
                   goalLine: {
                     type: "line",
-                    yMin: 40,
-                    yMax: 40,
+                    [isTrendLineRotated ? "xMin" : "yMin"]: 40,
+                    [isTrendLineRotated ? "xMax" : "yMax"]: 40,
                     borderColor: "red",
                     borderWidth: 2,
                     label: {
@@ -502,7 +542,9 @@
                 }
               }
             },
-            scales: { y: { beginAtZero: true } }
+            scales: {
+              [isTrendLineRotated ? "x" : "y"]: { beginAtZero: true }
+            }
           }
         });
       };
@@ -544,7 +586,7 @@
           { min: 8, label: '8+ hrs', color: '#004085' }
         ];
 
-        const isMaximized = elements.calendarContainer.classList.contains("calendar-maximized");
+        const isMaximized = elements.calendarContainer.classList.contains("chart-maximized");
         const cellHeight = isMaximized ? (window.innerWidth <= 576 ? 20 : 30) : (window.innerWidth <= 576 ? 16 : 20);
         const cellWidth = isMaximized ? (window.innerWidth <= 576 ? 20 : 30) : 'auto';
 
@@ -674,7 +716,7 @@
 
       if (elements.maximizeCalendarBtn) {
         elements.maximizeCalendarBtn.addEventListener("click", () => {
-          elements.calendarContainer.classList.add("calendar-maximized");
+          elements.calendarContainer.classList.add("chart-maximized");
           if (calendarChart) {
             setTimeout(() => calendarChart.resize(), 100);
           }
@@ -686,7 +728,7 @@
 
       if (elements.minimizeCalendarBtn) {
         elements.minimizeCalendarBtn.addEventListener("click", () => {
-          elements.calendarContainer.classList.remove("calendar-maximized");
+          elements.calendarContainer.classList.remove("chart-maximized");
           if (calendarChart) {
             setTimeout(() => calendarChart.resize(), 100);
           }
@@ -699,8 +741,8 @@
       if (elements.rotateCalendarBtn) {
         elements.rotateCalendarBtn.addEventListener("click", () => {
           isCalendarRotated = !isCalendarRotated;
-          if (!elements.calendarContainer.classList.contains("calendar-maximized")) {
-            elements.calendarContainer.classList.add("calendar-maximized");
+          if (!elements.calendarContainer.classList.contains("chart-maximized")) {
+            elements.calendarContainer.classList.add("chart-maximized");
           }
           renderCalendarHeatmap(filteredEntries);
           if (calendarChart) {
@@ -708,6 +750,68 @@
           }
           if (heatmapStatsPie) {
             setTimeout(() => heatmapStatsPie.resize(), 100);
+          }
+        });
+      }
+
+      if (elements.maximizeWeeklyBarBtn) {
+        elements.maximizeWeeklyBarBtn.addEventListener("click", () => {
+          elements.weeklyBarContainer.classList.add("chart-maximized");
+          if (window.barChart) {
+            setTimeout(() => window.barChart.resize(), 100);
+          }
+        });
+      }
+
+      if (elements.minimizeWeeklyBarBtn) {
+        elements.minimizeWeeklyBarBtn.addEventListener("click", () => {
+          elements.weeklyBarContainer.classList.remove("chart-maximized");
+          if (window.barChart) {
+            setTimeout(() => window.barChart.resize(), 100);
+          }
+        });
+      }
+
+      if (elements.rotateWeeklyBarBtn) {
+        elements.rotateWeeklyBarBtn.addEventListener("click", () => {
+          isWeeklyBarRotated = !isWeeklyBarRotated;
+          if (!elements.weeklyBarContainer.classList.contains("chart-maximized")) {
+            elements.weeklyBarContainer.classList.add("chart-maximized");
+          }
+          updateSelectedPeriodStats(filteredEntries);
+          if (window.barChart) {
+            setTimeout(() => window.barChart.resize(), 100);
+          }
+        });
+      }
+
+      if (elements.maximizeTrendLineBtn) {
+        elements.maximizeTrendLineBtn.addEventListener("click", () => {
+          elements.trendLineContainer.classList.add("chart-maximized");
+          if (window.lineChart) {
+            setTimeout(() => window.lineChart.resize(), 100);
+          }
+        });
+      }
+
+      if (elements.minimizeTrendLineBtn) {
+        elements.minimizeTrendLineBtn.addEventListener("click", () => {
+          elements.trendLineContainer.classList.remove("chart-maximized");
+          if (window.lineChart) {
+            setTimeout(() => window.lineChart.resize(), 100);
+          }
+        });
+      }
+
+      if (elements.rotateTrendLineBtn) {
+        elements.rotateTrendLineBtn.addEventListener("click", () => {
+          isTrendLineRotated = !isTrendLineRotated;
+          if (!elements.trendLineContainer.classList.contains("chart-maximized")) {
+            elements.trendLineContainer.classList.add("chart-maximized");
+          }
+          updateGlobalStats(filteredEntries);
+          if (window.lineChart) {
+            setTimeout(() => window.lineChart.resize(), 100);
           }
         });
       }
@@ -722,6 +826,12 @@
         }
         if (workedVsNotWorkedChart) {
           workedVsNotWorkedChart.resize();
+        }
+        if (window.barChart) {
+          window.barChart.resize();
+        }
+        if (window.lineChart) {
+          window.lineChart.resize();
         }
       });
 
@@ -866,7 +976,6 @@
     });
   </script>
 
-  <!-- Enhancement Script for Navigation -->
   <script>
     document.addEventListener("DOMContentLoaded", () => {
       const prevWeekNavBtn = document.getElementById("prevWeekNavBtn");
@@ -875,27 +984,21 @@
       const endDateInput = document.getElementById("endDate");
       const weekStatus = document.getElementById("weekStatus");
 
-      // Enhanced Previous Week Navigation
       if (prevWeekNavBtn && startDateInput && endDateInput) {
         prevWeekNavBtn.addEventListener("click", () => {
           try {
-            // Use current input or today's date as fallback
             const startDate = startDateInput.value || new Date().toISOString().split("T")[0];
             const weekStart = new Date(startDate);
-            // Adjust to week start (Monday, consistent with getWeekStart)
             weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 1) % 7));
-            // Move to previous week
             const prevWeekStart = new Date(weekStart);
             prevWeekStart.setDate(prevWeekStart.getDate() - 7);
             const prevWeekEnd = new Date(prevWeekStart);
             prevWeekEnd.setDate(prevWeekEnd.getDate() + 6);
             prevWeekEnd.setHours(23, 59, 59, 999);
 
-            // Update input fields
             startDateInput.value = prevWeekStart.toISOString().split("T")[0];
             endDateInput.value = prevWeekEnd.toISOString().split("T")[0];
 
-            // Trigger filter form submission to update UI
             const filterForm = document.getElementById("filterForm");
             if (filterForm) {
               filterForm.dispatchEvent(new Event("submit", { bubbles: true }));
@@ -909,7 +1012,6 @@
         });
       }
 
-      // Enhanced Next Week Navigation (retained for consistency)
       if (nextWeekNavBtn && startDateInput && endDateInput) {
         nextWeekNavBtn.addEventListener("click", () => {
           try {
