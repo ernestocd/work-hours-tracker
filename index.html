@@ -25,6 +25,7 @@
     .editable:hover { background-color: #f1f1f1; cursor: pointer; }
     .btn-sm { padding: 0.25rem 0.5rem; }
     #calendar-heatmap, #weekly-bar-chart, #trend-line-chart { height: 300px; width: 100%; }
+    #heatmap-stats-pie, #worked-vs-not-worked-chart { height: 200px; width: 100%; }
     .chart-container { position: relative; }
     .chart-maximized {
       position: fixed;
@@ -39,7 +40,8 @@
     }
     .chart-maximized #calendar-heatmap,
     .chart-maximized #weekly-bar-chart,
-    .chart-maximized #trend-line-chart {
+    .chart-maximized #trend-line-chart,
+    .chart-maximized #heatmap-stats-pie {
       height: calc(100vh - 150px);
       width: 100%;
     }
@@ -59,26 +61,20 @@
       top: 50px;
       right: 10px;
     }
-    #heatmap-stats-pie, #worked-vs-not-worked-chart {
-      height: 200px;
-      width: 100%;
-      margin-top: 1rem;
-    }
     .week-nav-btn { width: 40px; }
     @media (max-width: 576px) {
       body { padding: 1rem; }
       .btn-sm { font-size: 0.75rem; }
       #calendar-heatmap, #weekly-bar-chart, #trend-line-chart { height: 200px; }
+      #heatmap-stats-pie, #worked-vs-not-worked-chart { height: 150px; }
       .chart-maximized {
         padding: 0.5rem;
       }
       .chart-maximized #calendar-heatmap,
       .chart-maximized #weekly-bar-chart,
-      .chart-maximized #trend-line-chart {
+      .chart-maximized #trend-line-chart,
+      .chart-maximized #heatmap-stats-pie {
         height: calc(100vh - 140px);
-      }
-      #heatmap-stats-pie, #worked-vs-not-worked-chart {
-        height: 150px;
       }
       .week-nav-btn { width: 30px; font-size: 0.8rem; }
     }
@@ -202,15 +198,21 @@
     </div>
 
     <div class="row mt-4">
-      <div class="col-md-12 stat-box chart-container" id="calendarContainer">
+      <div class="col-md-6 stat-box chart-container" id="calendarContainer">
         <h5>Calendar Heatmap</h5>
         <button class="btn btn-outline-secondary btn-sm maximize-btn" id="maximizeCalendarBtn">Maximize</button>
         <button class="btn btn-outline-secondary btn-sm minimize-btn" id="minimizeCalendarBtn">Minimize</button>
         <button class="btn btn-outline-secondary btn-sm rotate-btn" id="rotateCalendarBtn">Rotate</button>
         <div id="calendar-heatmap"></div>
+      </div>
+      <div class="col-md-6 stat-box chart-container" id="heatmapStatsContainer">
+        <h5>Heatmap Statistics (Days)</h5>
+        <button class="btn btn-outline-secondary btn-sm maximize-btn" id="maximizeHeatmapStatsBtn">Maximize</button>
+        <button class="btn btn-outline-secondary btn-sm minimize-btn" id="minimizeHeatmapStatsBtn">Minimize</button>
+        <button class="btn btn-outline-secondary btn-sm rotate-btn" id="rotateHeatmapStatsBtn">Rotate</button>
         <canvas id="heatmap-stats-pie"></canvas>
       </div>
-   <|control637|>
+    </div>
   </div>
 
   <script>
@@ -240,6 +242,7 @@
       let isCalendarRotated = false;
       let isWeeklyBarRotated = false;
       let isTrendLineRotated = false;
+      let isHeatmapStatsRotated = false;
 
       const elements = {
         entryForm: document.getElementById("entryForm"),
@@ -278,6 +281,10 @@
         minimizeCalendarBtn: document.getElementById("minimizeCalendarBtn"),
         rotateCalendarBtn: document.getElementById("rotateCalendarBtn"),
         heatmapStatsPie: document.getElementById("heatmap-stats-pie"),
+        heatmapStatsContainer: document.getElementById("heatmapStatsContainer"),
+        maximizeHeatmapStatsBtn: document.getElementById("maximizeHeatmapStatsBtn"),
+        minimizeHeatmapStatsBtn: document.getElementById("minimizeHeatmapStatsBtn"),
+        rotateHeatmapStatsBtn: document.getElementById("rotateHeatmapStatsBtn"),
         workedVsNotWorkedChart: document.getElementById("worked-vs-not-worked-chart"),
         weeklyBarContainer: document.getElementById("weeklyBarContainer"),
         maximizeWeeklyBarBtn: document.getElementById("maximizeWeeklyBarBtn"),
@@ -551,6 +558,9 @@
 
       const renderCalendarHeatmap = (entries) => {
         if (!elements.calendarHeatmap) return console.error("calendarHeatmap not found");
+        if (!elements.heatmapStatsPie) return console.error("heatmapStatsPie not found");
+
+        // Render Calendar Heatmap
         if (typeof echarts === "undefined") {
           console.error("ECharts is not available. Skipping heatmap rendering.");
           elements.calendarHeatmap.innerHTML = `
@@ -635,6 +645,7 @@
           `;
         }
 
+        // Render Heatmap Stats Pie Chart
         const stats = {
           zero: 0,
           zeroToTwo: 0,
@@ -664,7 +675,7 @@
 
         if (heatmapStatsPie instanceof Chart) heatmapStatsPie.destroy();
         heatmapStatsPie = new Chart(elements.heatmapStatsPie, {
-          type: 'pie',
+          type: isHeatmapStatsRotated ? 'bar' : 'pie',
           data: {
             labels: [
               `0 hrs (No Work): ${stats.zero} (${zeroPercent}%)`,
@@ -675,6 +686,7 @@
               `8+ hrs: ${stats.eightPlus} (${eightPlusPercent}%)`
             ],
             datasets: [{
+              label: isHeatmapStatsRotated ? 'Days' : undefined,
               data: [
                 stats.zero,
                 stats.zeroToTwo,
@@ -694,14 +706,22 @@
             }]
           },
           options: {
+            indexAxis: isHeatmapStatsRotated ? 'y' : undefined,
             plugins: {
-              legend: { position: 'bottom', labels: { boxWidth: 12 } },
+              legend: {
+                position: isHeatmapStatsRotated ? 'right' : 'bottom',
+                labels: { boxWidth: 12 }
+              },
               title: {
                 display: true,
                 text: 'Heatmap Statistics (Days)',
                 padding: { top: 10, bottom: 10 }
               }
-            }
+            },
+            scales: isHeatmapStatsRotated ? {
+              x: { beginAtZero: true },
+              y: { ticks: { autoSkip: false } }
+            } : undefined
           }
         });
       };
@@ -720,9 +740,6 @@
           if (calendarChart) {
             setTimeout(() => calendarChart.resize(), 100);
           }
-          if (heatmapStatsPie) {
-            setTimeout(() => heatmapStatsPie.resize(), 100);
-          }
         });
       }
 
@@ -731,9 +748,6 @@
           elements.calendarContainer.classList.remove("chart-maximized");
           if (calendarChart) {
             setTimeout(() => calendarChart.resize(), 100);
-          }
-          if (heatmapStatsPie) {
-            setTimeout(() => heatmapStatsPie.resize(), 100);
           }
         });
       }
@@ -748,6 +762,34 @@
           if (calendarChart) {
             setTimeout(() => calendarChart.resize(), 100);
           }
+        });
+      }
+
+      if (elements.maximizeHeatmapStatsBtn) {
+        elements.maximizeHeatmapStatsBtn.addEventListener("click", () => {
+          elements.heatmapStatsContainer.classList.add("chart-maximized");
+          if (heatmapStatsPie) {
+            setTimeout(() => heatmapStatsPie.resize(), 100);
+          }
+        });
+      }
+
+      if (elements.minimizeHeatmapStatsBtn) {
+        elements.minimizeHeatmapStatsBtn.addEventListener("click", () => {
+          elements.heatmapStatsContainer.classList.remove("chart-maximized");
+          if (heatmapStatsPie) {
+            setTimeout(() => heatmapStatsPie.resize(), 100);
+          }
+        });
+      }
+
+      if (elements.rotateHeatmapStatsBtn) {
+        elements.rotateHeatmapStatsBtn.addEventListener("click", () => {
+          isHeatmapStatsRotated = !isHeatmapStatsRotated;
+          if (!elements.heatmapStatsContainer.classList.contains("chart-maximized")) {
+            elements.heatmapStatsContainer.classList.add("chart-maximized");
+          }
+          renderCalendarHeatmap(filteredEntries);
           if (heatmapStatsPie) {
             setTimeout(() => heatmapStatsPie.resize(), 100);
           }
@@ -818,7 +860,6 @@
 
       window.addEventListener("resize", () => {
         if (calendarChart) {
-          renderCalendarHeatmap(filteredEntries);
           calendarChart.resize();
         }
         if (heatmapStatsPie) {
