@@ -157,7 +157,7 @@
       border-color: #1a3c34;
       box-shadow: 0 0 0 2px rgba(26, 60, 52, 0.1);
     }
-    .week-nav-btn {
+    .week-nav-btn, .action-btn {
       width: 2.25rem;
       height: 2.25rem;
       padding: 0;
@@ -166,19 +166,7 @@
       border: 1px solid #ced4da;
       transition: background-color 0.2s ease;
     }
-    .week-nav-btn:hover {
-      background-color: #e9ecef;
-    }
-    .action-btn {
-      width: 2.25rem;
-      height: 2.25rem;
-      padding: 0;
-      font-size: 0.875rem;
-      border-radius: 8px;
-      border: 1px solid #ced4da;
-      transition: background-color 0.2s ease;
-    }
-    .action-btn:hover {
+    .week-nav-btn:hover, .action-btn:hover {
       background-color: #e9ecef;
     }
     .stat-box p {
@@ -243,10 +231,26 @@
         height: calc(100vh - 100px);
       }
       .filter-sticky { padding: 0.5rem; }
-      .filter-sticky .form-control { height: 2rem; font-size: 0.8rem; }
-      .week-nav-btn { width: 2rem; height: 2rem; font-size: 0.8rem; }
-      .action-btn { width: 2rem; height: 2rem; font-size: 0.8rem; }
-      .filter-sticky .row > div { margin-bottom: 0.3rem; }
+      .filter-sticky .row > div { margin-bottom: 0.5rem; }
+      .filter-sticky .form-control {
+        height: 2.5rem;
+        font-size: 1rem;
+      }
+      .filter-sticky .date-input-col {
+        flex: 0 0 50%;
+        max-width: 50%;
+      }
+      .week-nav-btn, .action-btn {
+        width: 2.5rem;
+        height: 2.5rem;
+        font-size: 1rem;
+        margin-right: 0.5rem;
+      }
+      .filter-buttons-row {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.5rem;
+      }
     }
   </style>
 </head>
@@ -257,19 +261,17 @@
     <div class="filter-sticky">
       <form id="filterForm">
         <div class="row g-2 align-items-center">
-          <div class="col-5 col-md-3">
+          <div class="col-6 col-md-3 date-input-col">
             <input type="date" id="startDate" class="form-control" placeholder="Start Date" aria-label="Start Date" />
           </div>
-          <div class="col-5 col-md-3">
+          <div class="col-6 col-md-3 date-input-col">
             <input type="date" id="endDate" class="form-control" placeholder="End Date" aria-label="End Date" />
           </div>
-          <div class="col-2 col-md-1 d-flex">
-            <button type="button" id="prevWeekNavBtn" class="btn btn-outline-primary week-nav-btn me-1" title="Previous Week" aria-label="Previous Week">←</button>
+          <div class="col-12 col-md-6 filter-buttons-row">
+            <button type="button" id="prevWeekNavBtn" class="btn btn-outline-primary week-nav-btn" title="Previous Week" aria-label="Previous Week">←</button>
             <button type="button" id="nextWeekNavBtn" class="btn btn-outline-primary week-nav-btn" title="Next Week" aria-label="Next Week">→</button>
-          </div>
-          <div class="col-12 col-md-5 d-flex justify-content-end">
-            <button type="button" id="resetBtn" class="btn btn-outline-secondary action-btn me-1" title="Reset Filters" aria-label="Reset Filters">⟳</button>
-            <button type="button" id="currentWeekBtn" class="btn btn-outline-primary action-btn me-1" title="Show Current Week" aria-label="Show Current Week">📅</button>
+            <button type="button" id="resetBtn" class="btn btn-outline-secondary action-btn" title="Reset Filters" aria-label="Reset Filters">⟳</button>
+            <button type="button" id="currentWeekBtn" class="btn btn-outline-primary action-btn" title="Show Current Week" aria-label="Show Current Week">📅</button>
             <button type="button" id="toggleTableBtn" class="btn btn-outline-primary action-btn" title="Show/Hide Table" aria-label="Show/Hide Table">📋</button>
           </div>
         </div>
