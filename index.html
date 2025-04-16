@@ -9,6 +9,7 @@
   <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png">
   <link rel="manifest" href="img/site.webmanifest">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.4.0"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -16,17 +17,90 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
   <style>
-    body { padding: 1rem; background: #f8f9fa; }
-    .stat-box { border-radius: 12px; background: white; box-shadow: 0 0 10px rgba(0,0,0,0.05); padding: 1rem; margin-bottom: 1rem; }
-    .table-container { max-height: 300px; overflow-y: auto; margin-bottom: 2rem; display: none; }
-    .table th, .table td { vertical-align: middle; }
-    .highlight { animation: highlight 1s ease-out; }
-    @keyframes highlight { 0% { background-color: #d4edda; } 100% { background-color: transparent; } }
-    .editable:hover { background-color: #f1f1f1; cursor: pointer; }
-    .btn-sm { padding: 0.25rem 0.5rem; }
-    #calendar-heatmap, #weekly-bar-chart, #trend-line-chart { height: 350px; width: 100%; }
-    #heatmap-stats-pie, #worked-vs-not-worked-chart { height: 250px; width: 100%; }
-    .chart-container { position: relative; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #f5f7fa;
+      padding: 1.5rem;
+      color: #333;
+    }
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 600;
+      color: #1a3c34;
+      margin-bottom: 1.5rem;
+    }
+    h5 {
+      font-size: 1.1rem;
+      font-weight: 500;
+      color: #1a3c34;
+      margin-bottom: 1rem;
+    }
+    .stat-box {
+      border-radius: 10px;
+      background: white;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .stat-box:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    .table-container {
+      max-height: 300px;
+      overflow-y: auto;
+      margin-bottom: 2rem;
+      display: none;
+      border-radius: 10px;
+      background: white;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      padding: 1rem;
+    }
+    .table th, .table td {
+      vertical-align: middle;
+      padding: 0.75rem;
+    }
+    .table thead {
+      background: #f8f9fa;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    .table tbody tr:nth-child(even) {
+      background: #f9fbfc;
+    }
+    .highlight {
+      animation: highlight 1s ease-out;
+    }
+    @keyframes highlight {
+      0% { background-color: #e6ffed; }
+      100% { background-color: transparent; }
+    }
+    .editable:hover {
+      background-color: #f1f3f5;
+      cursor: pointer;
+    }
+    .btn-sm {
+      padding: 0.35rem 0.75rem;
+      font-size: 0.875rem;
+    }
+    #calendar-heatmap, #weekly-bar-chart, #trend-line-chart {
+      height: 350px;
+      width: 100%;
+    }
+    #heatmap-stats-pie, #worked-vs-not-worked-chart {
+      height: 250px;
+      width: 100%;
+    }
+    .chart-container {
+      position: relative;
+      border-radius: 10px;
+      background: white;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
     .chart-maximized {
       position: fixed;
       top: 0;
@@ -35,7 +109,7 @@
       height: 100vh;
       z-index: 1000;
       background: white;
-      padding: 1rem;
+      padding: 1.5rem;
       margin: 0;
     }
     .chart-maximized #calendar-heatmap,
@@ -54,44 +128,125 @@
       z-index: 1001;
     }
     .minimize-btn {
-      top: 10px;
-      right: 10px;
+      top: 15px;
+      right: 15px;
     }
     .rotate-btn {
-      top: 50px;
-      right: 10px;
+      top: 55px;
+      right: 15px;
     }
     .filter-sticky {
       position: sticky;
       top: 0;
       z-index: 999;
-      background: #f8f9fa;
-      padding: 0.5rem 0;
-      border-bottom: 1px solid #dee2e6;
+      background: white;
+      padding: 0.75rem;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      margin-bottom: 1.5rem;
     }
     .filter-sticky .row { align-items: center; }
-    .filter-sticky .form-control { height: 2rem; font-size: 0.9rem; }
-    .week-nav-btn { width: 2rem; height: 2rem; padding: 0; font-size: 0.9rem; }
-    .action-btn { width: 2.5rem; height: 2.5rem; padding: 0; font-size: 0.9rem; }
+    .filter-sticky .form-control {
+      height: 2.25rem;
+      font-size: 0.875rem;
+      border-radius: 8px;
+      border: 1px solid #ced4da;
+      transition: border-color 0.2s ease;
+    }
+    .filter-sticky .form-control:focus {
+      border-color: #1a3c34;
+      box-shadow: 0 0 0 2px rgba(26, 60, 52, 0.1);
+    }
+    .week-nav-btn {
+      width: 2.25rem;
+      height: 2.25rem;
+      padding: 0;
+      font-size: 0.875rem;
+      border-radius: 8px;
+      border: 1px solid #ced4da;
+      transition: background-color 0.2s ease;
+    }
+    .week-nav-btn:hover {
+      background-color: #e9ecef;
+    }
+    .action-btn {
+      width: 2.25rem;
+      height: 2.25rem;
+      padding: 0;
+      font-size: 0.875rem;
+      border-radius: 8px;
+      border: 1px solid #ced4da;
+      transition: background-color 0.2s ease;
+    }
+    .action-btn:hover {
+      background-color: #e9ecef;
+    }
+    .stat-box p {
+      font-size: 0.875rem;
+      color: #555;
+      margin-bottom: 0.5rem;
+    }
+    .stat-box strong {
+      color: #1a3c34;
+    }
+    .progress {
+      height: 0.5rem;
+      border-radius: 5px;
+      background: #e9ecef;
+    }
+    .progress-bar {
+      background: #1a3c34;
+    }
+    .btn-outline-secondary {
+      border-color: #ced4da;
+      color: #555;
+    }
+    .btn-outline-secondary:hover {
+      background-color: #f1f3f5;
+      color: #1a3c34;
+    }
+    .error-message {
+      color: #dc3545;
+      background: #f8d7da;
+      padding: 0.5rem;
+      border-radius: 5px;
+      font-size: 0.875rem;
+    }
+    .loading-spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #1a3c34;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      animation: spin 1s linear infinite;
+      margin: 1rem auto;
+      display: none;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
     @media (max-width: 576px) {
-      body { padding: 0.5rem; }
+      body { padding: 1rem; }
+      h1 { font-size: 1.5rem; }
+      h5 { font-size: 1rem; }
+      .stat-box { padding: 1rem; }
+      .chart-container { padding: 1rem; }
       .btn-sm { font-size: 0.75rem; }
       #calendar-heatmap, #weekly-bar-chart, #trend-line-chart { height: 300px; }
       #heatmap-stats-pie, #worked-vs-not-worked-chart { height: 200px; }
-      .chart-maximized {
-        padding: 0.5rem;
-      }
+      .chart-maximized { padding: 1rem; }
       .chart-maximized #calendar-heatmap,
       .chart-maximized #weekly-bar-chart,
       .chart-maximized #trend-line-chart,
       .chart-maximized #heatmap-stats-pie {
         height: calc(100vh - 100px);
       }
-      .filter-sticky { padding: 0.3rem 0; }
-      .filter-sticky .form-control { height: 1.8rem; font-size: 0.8rem; }
-      .week-nav-btn { width: 1.8rem; height: 1.8rem; font-size: 0.8rem; }
+      .filter-sticky { padding: 0.5rem; }
+      .filter-sticky .form-control { height: 2rem; font-size: 0.8rem; }
+      .week-nav-btn { width: 2rem; height: 2rem; font-size: 0.8rem; }
       .action-btn { width: 2rem; height: 2rem; font-size: 0.8rem; }
-      .filter-sticky .row > div { margin-bottom: 0.2rem; }
+      .filter-sticky .row > div { margin-bottom: 0.3rem; }
     }
   </style>
 </head>
@@ -101,7 +256,7 @@
 
     <div class="filter-sticky">
       <form id="filterForm">
-        <div class="row g-1 align-items-center">
+        <div class="row g-2 align-items-center">
           <div class="col-5 col-md-3">
             <input type="date" id="startDate" class="form-control" placeholder="Start Date" aria-label="Start Date" />
           </div>
@@ -109,17 +264,19 @@
             <input type="date" id="endDate" class="form-control" placeholder="End Date" aria-label="End Date" />
           </div>
           <div class="col-2 col-md-1 d-flex">
-            <button type="button" id="prevWeekNavBtn" class="btn btn-outline-primary week-nav-btn me-1" title="Previous Week">←</button>
-            <button type="button" id="nextWeekNavBtn" class="btn btn-outline-primary week-nav-btn" title="Next Week">→</button>
+            <button type="button" id="prevWeekNavBtn" class="btn btn-outline-primary week-nav-btn me-1" title="Previous Week" aria-label="Previous Week">←</button>
+            <button type="button" id="nextWeekNavBtn" class="btn btn-outline-primary week-nav-btn" title="Next Week" aria-label="Next Week">→</button>
           </div>
           <div class="col-12 col-md-5 d-flex justify-content-end">
-            <button type="button" id="resetBtn" class="btn btn-outline-secondary action-btn me-1" title="Reset">⟳</button>
-            <button type="button" id="currentWeekBtn" class="btn btn-outline-primary action-btn me-1" title="Current Week">📅</button>
-            <button type="button" id="toggleTableBtn" class="btn btn-outline-primary action-btn" title="Show/Hide Table">📋</button>
+            <button type="button" id="resetBtn" class="btn btn-outline-secondary action-btn me-1" title="Reset Filters" aria-label="Reset Filters">⟳</button>
+            <button type="button" id="currentWeekBtn" class="btn btn-outline-primary action-btn me-1" title="Show Current Week" aria-label="Show Current Week">📅</button>
+            <button type="button" id="toggleTableBtn" class="btn btn-outline-primary action-btn" title="Show/Hide Table" aria-label="Show/Hide Table">📋</button>
           </div>
         </div>
       </form>
     </div>
+
+    <div class="loading-spinner" id="loadingSpinner"></div>
 
     <div class="table-container" id="tableContainer">
       <table class="table table-bordered table-hover">
@@ -173,35 +330,35 @@
     </div>
 
     <div class="row mt-4">
-      <div class="col-md-6 stat-box chart-container" id="weeklyBarContainer">
+      <div class="col-md-6 chart-container" id="weeklyBarContainer">
         <h5>Weekly Hours Distribution</h5>
-        <button class="btn btn-outline-secondary btn-sm maximize-btn" id="maximizeWeeklyBarBtn">Maximize</button>
-        <button class="btn btn-outline-secondary btn-sm minimize-btn" id="minimizeWeeklyBarBtn">Minimize</button>
-        <button class="btn btn-outline-secondary btn-sm rotate-btn" id="rotateWeeklyBarBtn">Rotate</button>
+        <button class="btn btn-outline-secondary btn-sm maximize-btn" id="maximizeWeeklyBarBtn" aria-label="Maximize Chart">Maximize</button>
+        <button class="btn btn-outline-secondary btn-sm minimize-btn" id="minimizeWeeklyBarBtn" aria-label="Minimize Chart">Minimize</button>
+        <button class="btn btn-outline-secondary btn-sm rotate-btn" id="rotateWeeklyBarBtn" aria-label="Rotate Chart">Rotate</button>
         <canvas id="weeklyBarChart"></canvas>
       </div>
-      <div class="col-md-6 stat-box chart-container" id="trendLineContainer">
+      <div class="col-md-6 chart-container" id="trendLineContainer">
         <h5>Weekly Hours Trend</h5>
-        <button class="btn btn-outline-secondary btn-sm maximize-btn" id="maximizeTrendLineBtn">Maximize</button>
-        <button class="btn btn-outline-secondary btn-sm minimize-btn" id="minimizeTrendLineBtn">Minimize</button>
-        <button class="btn btn-outline-secondary btn-sm rotate-btn" id="rotateTrendLineBtn">Rotate</button>
+        <button class="btn btn-outline-secondary btn-sm maximize-btn" id="maximizeTrendLineBtn" aria-label="Maximize Chart">Maximize</button>
+        <button class="btn btn-outline-secondary btn-sm minimize-btn" id="minimizeTrendLineBtn" aria-label="Minimize Chart">Minimize</button>
+        <button class="btn btn-outline-secondary btn-sm rotate-btn" id="rotateTrendLineBtn" aria-label="Rotate Chart">Rotate</button>
         <canvas id="trendLineChart"></canvas>
       </div>
     </div>
 
     <div class="row mt-4">
-      <div class="col-md-6 stat-box chart-container" id="calendarContainer">
+      <div class="col-md-6 chart-container" id="calendarContainer">
         <h5>Calendar Heatmap</h5>
-        <button class="btn btn-outline-secondary btn-sm maximize-btn" id="maximizeCalendarBtn">Maximize</button>
-        <button class="btn btn-outline-secondary btn-sm minimize-btn" id="minimizeCalendarBtn">Minimize</button>
-        <button class="btn btn-outline-secondary btn-sm rotate-btn" id="rotateCalendarBtn">Rotate</button>
+        <button class="btn btn-outline-secondary btn-sm maximize-btn" id="maximizeCalendarBtn" aria-label="Maximize Chart">Maximize</button>
+        <button class="btn btn-outline-secondary btn-sm minimize-btn" id="minimizeCalendarBtn" aria-label="Minimize Chart">Minimize</button>
+        <button class="btn btn-outline-secondary btn-sm rotate-btn" id="rotateCalendarBtn" aria-label="Rotate Chart">Rotate</button>
         <div id="calendar-heatmap"></div>
       </div>
-      <div class="col-md-6 stat-box chart-container" id="heatmapStatsContainer">
+      <div class="col-md-6 chart-container" id="heatmapStatsContainer">
         <h5>Heatmap Statistics (Days)</h5>
-        <button class="btn btn-outline-secondary btn-sm maximize-btn" id="maximizeHeatmapStatsBtn">Maximize</button>
-        <button class="btn btn-outline-secondary btn-sm minimize-btn" id="minimizeHeatmapStatsBtn">Minimize</button>
-        <button class="btn btn-outline-secondary btn-sm rotate-btn" id="rotateHeatmapStatsBtn">Rotate</button>
+        <button class="btn btn-outline-secondary btn-sm maximize-btn" id="maximizeHeatmapStatsBtn" aria-label="Maximize Chart">Maximize</button>
+        <button class="btn btn-outline-secondary btn-sm minimize-btn" id="minimizeHeatmapStatsBtn" aria-label="Minimize Chart">Minimize</button>
+        <button class="btn btn-outline-secondary btn-sm rotate-btn" id="rotateHeatmapStatsBtn" aria-label="Rotate Chart">Rotate</button>
         <canvas id="heatmap-stats-pie"></canvas>
       </div>
     </div>
@@ -283,7 +440,8 @@
         trendLineContainer: document.getElementById("trendLineContainer"),
         maximizeTrendLineBtn: document.getElementById("maximizeTrendLineBtn"),
         minimizeTrendLineBtn: document.getElementById("minimizeTrendLineBtn"),
-        rotateTrendLineBtn: document.getElementById("rotateTrendLineBtn")
+        rotateTrendLineBtn: document.getElementById("rotateTrendLineBtn"),
+        loadingSpinner: document.getElementById("loadingSpinner")
       };
 
       const getWeekStart = (date) => {
@@ -310,14 +468,14 @@
           <tr data-id="${entry.id}">
             <td><input type="date" class="form-control editable date-field" value="${entry.date}" aria-label="Edit Date" /></td>
             <td><input type="number" class="form-control editable hours-field" value="${entry.hours}" step="0.1" min="0" aria-label="Edit Hours" /></td>
-            <td><button class="btn btn-danger btn-sm delete-btn">🗑️ Delete</button></td>
+            <td><button class="btn btn-danger btn-sm delete-btn" aria-label="Delete Entry">🗑️</button></td>
           </tr>
         `).join("");
         elements.entriesTable.innerHTML = `
           <tr id="addRow">
             <td><input type="date" id="newDate" class="form-control" aria-label="New Date" /></td>
             <td><input type="number" id="newHours" class="form-control" step="0.1" min="0" placeholder="Hours" aria-label="New Hours" /></td>
-            <td><button id="addBtn" class="btn btn-success btn-sm">Add New</button></td>
+            <td><button id="addBtn" class="btn btn-success btn-sm" aria-label="Add New Entry">Add New</button></td>
           </tr>
           ${rows}
         `;
@@ -333,6 +491,7 @@
             const date = row.querySelector(".date-field").value;
             const hours = parseFloat(row.querySelector(".hours-field").value);
             if (!date || isNaN(hours) || hours < 0) {
+              elements.weekStatus.classList.add("error-message");
               elements.weekStatus.textContent = "Invalid date or hours";
               return;
             }
@@ -341,6 +500,7 @@
               row.classList.add("highlight");
             } catch (error) {
               console.error("Error updating entry:", error);
+              elements.weekStatus.classList.add("error-message");
               elements.weekStatus.textContent = "Error updating entry";
             }
           });
@@ -354,6 +514,7 @@
               await db.ref(`entries/${id}`).remove();
             } catch (error) {
               console.error("Error deleting entry:", error);
+              elements.weekStatus.classList.add("error-message");
               elements.weekStatus.textContent = "Error deleting entry";
             }
           });
@@ -364,6 +525,7 @@
             const date = newDateInput.value;
             const hours = parseFloat(newHoursInput.value);
             if (!date || isNaN(hours) || hours < 0) {
+              elements.weekStatus.classList.add("error-message");
               elements.weekStatus.textContent = "Invalid date or hours";
               return;
             }
@@ -371,8 +533,11 @@
               await db.ref("entries").push({ date, hours });
               newDateInput.value = "";
               newHoursInput.value = "";
+              newDateInput.classList.add("highlight");
+              newHoursInput.classList.add("highlight");
             } catch (error) {
               console.error("Error adding entry:", error);
+              elements.weekStatus.classList.add("error-message");
               elements.weekStatus.textContent = "Error adding entry";
             }
           });
@@ -409,9 +574,14 @@
           type: "doughnut",
           data: {
             labels: ["Worked", "Remaining"],
-            datasets: [{ data: [totalHours, Math.max(0, expectedHours - totalHours)], backgroundColor: ["#0d6efd", "#dee2e6"] }]
+            datasets: [{ data: [totalHours, Math.max(0, expectedHours - totalHours)], backgroundColor: ["#1a3c34", "#e9ecef"] }]
           },
-          options: { cutout: "75%", plugins: { legend: { position: "bottom" } } }
+          options: {
+            cutout: "75%",
+            plugins: {
+              legend: { position: "bottom", labels: { font: { size: 12, family: "'Inter', sans-serif" } } }
+            }
+          }
         });
 
         const dailyHours = Array(7).fill(0);
@@ -427,14 +597,23 @@
             datasets: [{
               label: "Hours",
               data: isWeeklyBarRotated ? ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] : dailyHours,
-              backgroundColor: "#0d6efd",
+              backgroundColor: "#1a3c34",
               axis: isWeeklyBarRotated ? "y" : "x"
             }]
           },
           options: {
             indexAxis: isWeeklyBarRotated ? "y" : "x",
             scales: {
-              [isWeeklyBarRotated ? "x" : "y"]: { beginAtZero: true }
+              [isWeeklyBarRotated ? "x" : "y"]: {
+                beginAtZero: true,
+                ticks: { font: { family: "'Inter', sans-serif" } }
+              },
+              [isWeeklyBarRotated ? "y" : "x"]: {
+                ticks: { font: { family: "'Inter', sans-serif" } }
+              }
+            },
+            plugins: {
+              legend: { labels: { font: { family: "'Inter', sans-serif" } } }
             }
           }
         });
@@ -484,17 +663,21 @@
             ],
             datasets: [{
               data: [daysWorkedCount, daysNotWorked],
-              backgroundColor: ["#28a745", "#ff0000"]
+              backgroundColor: ["#28a745", "#dc3545"]
             }]
           },
           options: {
             cutout: "75%",
             plugins: {
-              legend: { position: "bottom" },
+              legend: {
+                position: "bottom",
+                labels: { font: { size: 12, family: "'Inter', sans-serif" } }
+              },
               title: {
                 display: true,
                 text: "Worked vs Not Worked Days",
-                padding: { top: 10, bottom: 10 }
+                padding: { top: 10, bottom: 10 },
+                font: { size: 14, family: "'Inter', sans-serif", weight: "500" }
               }
             }
           }
@@ -510,10 +693,10 @@
             datasets: [{
               label: "Weekly Hours",
               data: isTrendLineRotated ? labels : data,
-              borderColor: "#198754",
+              borderColor: "#1a3c34",
               fill: false,
               pointRadius: 4,
-              pointBackgroundColor: "#198754"
+              pointBackgroundColor: "#1a3c34"
             }]
           },
           options: {
@@ -533,14 +716,23 @@
                       position: "start",
                       backgroundColor: "rgba(255, 99, 132, 0.8)",
                       color: "white",
-                      font: { weight: "bold" }
+                      font: { weight: "bold", family: "'Inter', sans-serif" }
                     }
                   }
                 }
+              },
+              legend: {
+                labels: { font: { family: "'Inter', sans-serif" } }
               }
             },
             scales: {
-              [isTrendLineRotated ? "x" : "y"]: { beginAtZero: true }
+              [isTrendLineRotated ? "x" : "y"]: {
+                beginAtZero: true,
+                ticks: { font: { family: "'Inter', sans-serif" } }
+              },
+              [isTrendLineRotated ? "y" : "x"]: {
+                ticks: { font: { family: "'Inter', sans-serif" } }
+              }
             }
           }
         });
@@ -577,12 +769,12 @@
         startDate.setMonth(startDate.getMonth() - 6);
 
         const pieces = [
-          { value: 0, label: '0 hrs (No Work)', color: '#ff0000' },
+          { value: 0, label: '0 hrs (No Work)', color: '#dc3545' },
           { min: 0, max: 2, label: '0-2 hrs', color: '#e6f3ff' },
           { min: 2, max: 4, label: '2-4 hrs', color: '#b3d9ff' },
           { min: 4, max: 6, label: '4-6 hrs', color: '#80bfff' },
           { min: 6, max: 8, label: '6-8 hrs', color: '#4d94ff' },
-          { min: 8, label: '8+ hrs', color: '#004085' }
+          { min: 8, label: '8+ hrs', color: '#1a3c34' }
         ];
 
         const isMaximized = elements.calendarContainer.classList.contains("chart-maximized");
@@ -602,7 +794,7 @@
             orient: isCalendarRotated ? 'vertical' : 'horizontal',
             left: isCalendarRotated ? 'right' : 'center',
             top: isCalendarRotated ? 'center' : 0,
-            textStyle: { color: '#000' },
+            textStyle: { color: '#333', fontFamily: "'Inter', sans-serif" },
             calculable: true
           },
           calendar: {
@@ -612,8 +804,10 @@
             itemStyle: { borderColor: '#fff' },
             splitLine: {
               show: true,
-              lineStyle: { color: '#000', width: 1, type: 'solid' }
-            }
+              lineStyle: { color: '#e9ecef', width: 1, type: 'solid' }
+            },
+            dayLabel: { nameMap: 'en', fontFamily: "'Inter', sans-serif" },
+            monthLabel: { fontFamily: "'Inter', sans-serif" }
           },
           series: [{
             type: 'heatmap',
@@ -684,12 +878,12 @@
                 stats.eightPlus
               ],
               backgroundColor: [
-                '#ff0000',
+                '#dc3545',
                 '#e6f3ff',
                 '#b3d9ff',
                 '#80bfff',
                 '#4d94ff',
-                '#004085'
+                '#1a3c34'
               ]
             }]
           },
@@ -698,17 +892,18 @@
             plugins: {
               legend: {
                 position: isHeatmapStatsRotated ? 'right' : 'bottom',
-                labels: { boxWidth: 12 }
+                labels: { boxWidth: 12, font: { size: 12, family: "'Inter', sans-serif" } }
               },
               title: {
                 display: true,
                 text: 'Heatmap Statistics (Days)',
-                padding: { top: 10, bottom: 10 }
+                padding: { top: 10, bottom: 10 },
+                font: { size: 14, family: "'Inter', sans-serif", weight: "500" }
               }
             },
             scales: isHeatmapStatsRotated ? {
-              x: { beginAtZero: true },
-              y: { ticks: { autoSkip: false } }
+              x: { beginAtZero: true, ticks: { font: { family: "'Inter', sans-serif" } } },
+              y: { ticks: { autoSkip: false, font: { family: "'Inter', sans-serif" } } }
             } : undefined
           }
         });
@@ -724,6 +919,7 @@
 
       const applyDateFilter = (startDateValue, endDateValue) => {
         if (!startDateValue || !endDateValue) {
+          elements.weekStatus.classList.add("error-message");
           elements.weekStatus.textContent = "Please select both dates";
           return;
         }
@@ -732,6 +928,7 @@
         const end = new Date(endDateValue);
         end.setHours(23, 59, 59, 999);
         if (start > end) {
+          elements.weekStatus.classList.add("error-message");
           elements.weekStatus.textContent = "Start date must be before end date";
           return;
         }
@@ -743,6 +940,24 @@
         updateUI(filtered);
         updateSelectedPeriodStats(filtered, start, end);
         updateGlobalStats(filtered, start, end);
+      };
+
+      const setInitialDateRange = (entries) => {
+        if (entries.length === 0) {
+          const today = new Date();
+          const weekStart = getWeekStart(today);
+          const weekEnd = new Date(weekStart);
+          weekEnd.setDate(weekEnd.getDate() + 6);
+          elements.startDateInput.value = formatDateForInput(weekStart);
+          elements.endDateInput.value = formatDateForInput(weekEnd);
+        } else {
+          const dates = entries.map(e => new Date(e.date));
+          const minDate = new Date(Math.min(...dates));
+          const maxDate = new Date(Math.max(...dates));
+          elements.startDateInput.value = formatDateForInput(minDate);
+          elements.endDateInput.value = formatDateForInput(maxDate);
+        }
+        applyDateFilter(elements.startDateInput.value, elements.endDateInput.value);
       };
 
       if (elements.startDateInput && elements.endDateInput) {
@@ -762,6 +977,7 @@
           const isHidden = elements.tableContainer.style.display === "none";
           elements.tableContainer.style.display = isHidden ? "block" : "none";
           elements.toggleTableBtn.setAttribute("title", isHidden ? "Hide Table" : "Show Table");
+          elements.toggleTableBtn.setAttribute("aria-label", isHidden ? "Hide Table" : "Show Table");
         });
       }
 
@@ -809,7 +1025,7 @@
         elements.minimizeHeatmapStatsBtn.addEventListener("click", () => {
           elements.heatmapStatsContainer.classList.remove("chart-maximized");
           if (heatmapStatsPie) {
-            setTimeout(() => heatmapStatsPie.resize(), 100);
+            setTimeout(() => calendarChart.resize(), 100);
           }
         });
       }
@@ -909,10 +1125,8 @@
 
       if (elements.resetBtn) {
         elements.resetBtn.addEventListener("click", () => {
-          elements.startDateInput.value = "";
-          elements.endDateInput.value = "";
+          setInitialDateRange(allEntries);
           elements.weekStatus.textContent = "";
-          updateUI(allEntries);
         });
       }
 
@@ -954,6 +1168,7 @@
         });
       }
 
+      elements.loadingSpinner.style.display = "block";
       db.ref("entries").on("value", (snapshot) => {
         try {
           const data = snapshot.val() || {};
@@ -963,10 +1178,13 @@
             hours: parseFloat(entry.hours)
           }));
           filteredEntries = allEntries;
-          updateUI(allEntries);
+          setInitialDateRange(allEntries);
+          elements.loadingSpinner.style.display = "none";
         } catch (error) {
           console.error("Error loading entries:", error);
+          elements.weekStatus.classList.add("error-message");
           elements.weekStatus.textContent = "Error loading data";
+          elements.loadingSpinner.style.display = "none";
         }
       });
     });
@@ -982,6 +1200,7 @@
 
       const applyDateFilter = (startDateValue, endDateValue) => {
         if (!startDateValue || !endDateValue) {
+          weekStatus.classList.add("error-message");
           weekStatus.textContent = "Please select both dates";
           return;
         }
@@ -990,6 +1209,7 @@
         const end = new Date(endDateValue);
         end.setHours(23, 59, 59, 999);
         if (start > end) {
+          weekStatus.classList.add("error-message");
           weekStatus.textContent = "Start date must be before end date";
           return;
         }
@@ -1017,6 +1237,7 @@
           } catch (error) {
             console.error("Error navigating to previous week:", error);
             if (weekStatus) {
+              weekStatus.classList.add("error-message");
               weekStatus.textContent = "Error navigating to previous week";
             }
           }
@@ -1042,6 +1263,7 @@
           } catch (error) {
             console.error("Error navigating to next week:", error);
             if (weekStatus) {
+              weekStatus.classList.add("error-message");
               weekStatus.textContent = "Error navigating to next week";
             }
           }
