@@ -113,7 +113,6 @@
             <button type="button" id="nextWeekNavBtn" class="btn btn-outline-primary week-nav-btn" title="Next Week">→</button>
           </div>
           <div class="col-12 col-md-5 d-flex justify-content-end">
-            <button type="submit" class="btn btn-secondary action-btn me-1" title="Filter">🔍</button>
             <button type="button" id="resetBtn" class="btn btn-outline-secondary action-btn me-1" title="Reset">⟳</button>
             <button type="button" id="currentWeekBtn" class="btn btn-outline-primary action-btn me-1" title="Current Week">📅</button>
             <button type="button" id="toggleTableBtn" class="btn btn-outline-primary action-btn" title="Show/Hide Table">📋</button>
@@ -723,6 +722,41 @@
         renderCalendarHeatmap(entries);
       };
 
+      const applyDateFilter = (startDateValue, endDateValue) => {
+        if (!startDateValue || !endDateValue) {
+          elements.weekStatus.textContent = "Please select both dates";
+          return;
+        }
+
+        const start = new Date(startDateValue);
+        const end = new Date(endDateValue);
+        end.setHours(23, 59, 59, 999);
+        if (start > end) {
+          elements.weekStatus.textContent = "Start date must be before end date";
+          return;
+        }
+
+        const filtered = allEntries.filter(e => {
+          const date = new Date(e.date);
+          return date >= start && date <= end;
+        });
+        updateUI(filtered);
+        updateSelectedPeriodStats(filtered, start, end);
+        updateGlobalStats(filtered, start, end);
+      };
+
+      if (elements.startDateInput && elements.endDateInput) {
+        const handleDateChange = () => {
+          const startDate = elements.startDateInput.value;
+          const endDate = elements.endDateInput.value;
+          if (startDate && endDate) {
+            applyDateFilter(startDate, endDate);
+          }
+        };
+        elements.startDateInput.addEventListener("change", handleDateChange);
+        elements.endDateInput.addEventListener("change", handleDateChange);
+      }
+
       if (elements.toggleTableBtn) {
         elements.toggleTableBtn.addEventListener("click", () => {
           const isHidden = elements.tableContainer.style.display === "none";
@@ -873,34 +907,6 @@
         }
       });
 
-      if (elements.filterForm) {
-        elements.filterForm.addEventListener("submit", (e) => {
-          e.preventDefault();
-          const startDate = elements.startDateInput.value;
-          const endDate = elements.endDateInput.value;
-          if (!startDate || !endDate) {
-            elements.weekStatus.textContent = "Please select both dates";
-            return;
-          }
-
-          const start = new Date(startDate);
-          const end = new Date(endDate);
-          end.setHours(23, 59, 59, 999);
-          if (start > end) {
-            elements.weekStatus.textContent = "Start date must be before end date";
-            return;
-          }
-
-          const filtered = allEntries.filter(e => {
-            const date = new Date(e.date);
-            return date >= start && date <= end;
-          });
-          updateUI(filtered);
-          updateSelectedPeriodStats(filtered, start, end);
-          updateGlobalStats(filtered, start, end);
-        });
-      }
-
       if (elements.resetBtn) {
         elements.resetBtn.addEventListener("click", () => {
           elements.startDateInput.value = "";
@@ -921,13 +927,7 @@
           elements.startDateInput.value = formatDateForInput(weekStart);
           elements.endDateInput.value = formatDateForInput(weekEnd);
 
-          const filtered = allEntries.filter(e => {
-            const date = new Date(e.date);
-            return date >= weekStart && date <= weekEnd;
-          });
-          updateUI(filtered);
-          updateSelectedPeriodStats(filtered, weekStart, weekEnd);
-          updateGlobalStats(filtered, weekStart, weekEnd);
+          applyDateFilter(elements.startDateInput.value, elements.endDateInput.value);
         });
       }
 
@@ -980,6 +980,24 @@
       const endDateInput = document.getElementById("endDate");
       const weekStatus = document.getElementById("weekStatus");
 
+      const applyDateFilter = (startDateValue, endDateValue) => {
+        if (!startDateValue || !endDateValue) {
+          weekStatus.textContent = "Please select both dates";
+          return;
+        }
+
+        const start = new Date(startDateValue);
+        const end = new Date(endDateValue);
+        end.setHours(23, 59, 59, 999);
+        if (start > end) {
+          weekStatus.textContent = "Start date must be before end date";
+          return;
+        }
+
+        const event = new Event("change", { bubbles: true });
+        startDateInput.dispatchEvent(event);
+      };
+
       if (prevWeekNavBtn && startDateInput && endDateInput) {
         prevWeekNavBtn.addEventListener("click", () => {
           try {
@@ -995,10 +1013,7 @@
             startDateInput.value = prevWeekStart.toISOString().split("T")[0];
             endDateInput.value = prevWeekEnd.toISOString().split("T")[0];
 
-            const filterForm = document.getElementById("filterForm");
-            if (filterForm) {
-              filterForm.dispatchEvent(new Event("submit", { bubbles: true }));
-            }
+            applyDateFilter(startDateInput.value, endDateInput.value);
           } catch (error) {
             console.error("Error navigating to previous week:", error);
             if (weekStatus) {
@@ -1023,10 +1038,7 @@
             startDateInput.value = nextWeekStart.toISOString().split("T")[0];
             endDateInput.value = nextWeekEnd.toISOString().split("T")[0];
 
-            const filterForm = document.getElementById("filterForm");
-            if (filterForm) {
-              filterForm.dispatchEvent(new Event("submit", { bubbles: true }));
-            }
+            applyDateFilter(startDateInput.value, endDateInput.value);
           } catch (error) {
             console.error("Error navigating to next week:", error);
             if (weekStatus) {
