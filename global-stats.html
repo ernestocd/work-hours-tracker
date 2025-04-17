@@ -59,7 +59,7 @@
       min-height: 300px;
       width: 100%;
     }
-    #weekly-trend-chart {
+    #weekly-hours-distribution {
       min-height: 300px;
       width: 100%;
     }
@@ -182,7 +182,7 @@
       .stat-box p { font-size: 0.8rem; }
       .info-icon { font-size: 0.8rem; }
       #calendar-heatmap { min-height: 200px; }
-      #weekly-trend-chart { min-height: 200px; }
+      #weekly-hours-distribution { min-height: 200px; }
     }
   </style>
 </head>
@@ -273,11 +273,11 @@
 
     <div class="row mt-4">
       <div class="col-md-6 stat-box">
-        <h5>Weekly Hours Trend</h5>
-        <p class="text-muted small">Weekly hours compared to the full-time 40-hour goal over time.</p>
-        <button class="btn btn-outline-secondary btn-sm maximize-btn" id="maximizeWeeklyTrendBtn" aria-label="Maximize Chart">Maximize</button>
-        <button class="btn btn-outline-secondary btn-sm minimize-btn" id="minimizeWeeklyTrendBtn" aria-label="Minimize Chart">Minimize</button>
-        <canvas id="weekly-trend-chart"></canvas>
+        <h5>Weekly Hours Distribution</h5>
+        <p class="text-muted small">Hours worked per day of the week across the entire dataset.</p>
+        <button class="btn btn-outline-secondary btn-sm maximize-btn" id="maximizeWeeklyHoursBtn" aria-label="Maximize Chart">Maximize</button>
+        <button class="btn btn-outline-secondary btn-sm minimize-btn" id="minimizeWeeklyHoursBtn" aria-label="Minimize Chart">Minimize</button>
+        <canvas id="weekly-hours-distribution"></canvas>
       </div>
       <div class="col-md-6 stat-box">
         <h5>Calendar Heatmap</h5>
@@ -321,7 +321,7 @@
           calendarChart: null,
           heatmapStatsPie: null,
           workedVsNotWorkedChart: null,
-          weeklyTrendChart: null
+          weeklyHoursDistribution: null
         }
       };
 
@@ -360,9 +360,9 @@
         heatmapStatsPie: document.getElementById("heatmap-stats-pie"),
         maximizeHeatmapStatsBtn: document.getElementById("maximizeHeatmapStatsBtn"),
         minimizeHeatmapStatsBtn: document.getElementById("minimizeHeatmapStatsBtn"),
-        weeklyTrendChart: document.getElementById("weekly-trend-chart"),
-        maximizeWeeklyTrendBtn: document.getElementById("maximizeWeeklyTrendBtn"),
-        minimizeWeeklyTrendBtn: document.getElementById("minimizeWeeklyTrendBtn"),
+        weeklyHoursDistribution: document.getElementById("weekly-hours-distribution"),
+        maximizeWeeklyHoursBtn: document.getElementById("maximizeWeeklyHoursBtn"),
+        minimizeWeeklyHoursBtn: document.getElementById("minimizeWeeklyHoursBtn"),
         loadingSpinner: document.getElementById("loadingSpinner"),
         infoModalBody: document.getElementById("infoModalBody"),
         fallbackMessage: document.getElementById("fallbackMessage")
@@ -487,7 +487,7 @@
       };
 
       const updateUI = (entries) => {
-        if (!elements.weeklyTrendChart || !elements.calendarHeatmap || !elements.heatmapStatsPie) {
+        if (!elements.weeklyHoursDistribution || !elements.calendarHeatmap || !elements.heatmapStatsPie) {
           console.error("Missing DOM elements for widgets");
           showError("Page rendering error. Please refresh.");
           return;
@@ -605,7 +605,7 @@
           elements.recentProgress.insertAdjacentHTML("afterend", `<span class="text-success small">↑ Improving!</span>`);
         }
 
-        elements.realWorldMessage.textContent = `Over ${totalWeeks} weeks, you averaged ${avgVsFullTimePercent.toFixed(1)}% of a full-time ${expectedHoursPerWeek}-hour/week schedule. You worked ${attendancePercent}% of expected workdays (5 days/week), missing ~${Math.round((100 - attendancePercent) / 100 * 5)} workdays/week. Only ${goalWeeks} of ${totalWeeks} weeks met full-time hours, falling short of full-time standards. See Weekly Hours Trend for details.`;
+        elements.realWorldMessage.textContent = `Over ${totalWeeks} weeks, you averaged ${avgVsFullTimePercent.toFixed(1)}% of a full-time ${expectedHoursPerWeek}-hour/week schedule. You worked ${attendancePercent}% of expected workdays (5 days/week), missing ~${Math.round((100 - attendancePercent) / 100 * 5)} workdays/week. Only ${goalWeeks} of ${totalWeeks} weeks met full-time hours, falling short of full-time standards. See Weekly Hours Distribution for details.`;
 
         const tips = [];
         if (avgVsFullTimePercent < 90) {
@@ -642,34 +642,28 @@
           }
         });
 
-        const weeksData = {
-          "2024-12-14": 34.1, "2024-12-21": 13.9, "2024-12-28": 24.6,
-          "2025-01-04": 26.8, "2025-01-11": 27.5, "2025-01-18": 11.5,
-          "2025-01-25": 24.5, "2025-02-01": 0, "2025-02-08": 24.2,
-          "2025-02-15": 26.9, "2025-02-22": 37, "2025-03-01": 39.8,
-          "2025-03-08": 40.6, "2025-03-15": 25.3, "2025-03-22": 35.7,
-          "2025-03-29": 26.93, "2025-04-05": 38.45, "2025-04-12": 15.18
-        };
-        const weekLabels = Object.keys(weeksData).sort();
-        const weekHours = weekLabels.map(w => weeksData[w]);
-        if (state.charts.weeklyTrendChart) state.charts.weeklyTrendChart.destroy();
-        state.charts.weeklyTrendChart = new Chart(elements.weeklyTrendChart, {
-          type: "line",
+        // Weekly Hours Distribution Bar Chart
+        if (state.charts.weeklyHoursDistribution) state.charts.weeklyHoursDistribution.destroy();
+        state.charts.weeklyHoursDistribution = new Chart(elements.weeklyHoursDistribution, {
+          type: "bar",
           data: {
-            labels: weekLabels.map(w => new Date(w).toLocaleDateString("en-US", { month: "short", day: "numeric" })),
-            datasets: [
-              { label: "Weekly Hours", data: weekHours, borderColor: "#28a745", fill: false },
-              { label: "Full-Time Goal", data: weekLabels.map(() => expectedHoursPerWeek), borderColor: "#1a3c34", borderDash: [5, 5], fill: false }
-            ]
+            labels: ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"],
+            datasets: [{
+              label: "Hours",
+              data: [127.14, 105.47, 58.9, 73.85, 39.58, 56.68, 11.34],
+              backgroundColor: "#1a3c34",
+              borderColor: "#1a3c34",
+              borderWidth: 1
+            }]
           },
           options: {
             plugins: {
-              legend: { position: "bottom", labels: { font: { family: "'Inter', sans-serif" } } },
-              title: { display: true, text: "Weekly Hours Trend", font: { size: 14, family: "'Inter', sans-serif", weight: "500" } }
+              legend: { position: "top", labels: { font: { family: "'Inter', sans-serif" } } },
+              title: { display: true, text: "Weekly Hours Distribution", font: { size: 14, family: "'Inter', sans-serif", weight: "500" } }
             },
             scales: {
               y: { beginAtZero: true, title: { display: true, text: "Hours" }, ticks: { font: { family: "'Inter', sans-serif" } } },
-              x: { ticks: { font: { family: "'Inter', sans-serif" }, maxRotation: 45, minRotation: 45 } }
+              x: { ticks: { font: { family: "'Inter', sans-serif" } } }
             }
           }
         });
@@ -693,7 +687,6 @@
         }
 
         try {
-          // Check element dimensions
           const rect = elements.calendarHeatmap.getBoundingClientRect();
           console.log("Calendar heatmap dimensions:", { width: rect.width, height: rect.height });
           if (rect.width === 0 || rect.height === 0) {
@@ -702,11 +695,9 @@
             return;
           }
 
-          // Dispose existing chart
           if (state.charts.calendarChart) state.charts.calendarChart.dispose();
           state.charts.calendarChart = echarts.init(elements.calendarHeatmap);
 
-          // Prepare data
           const data = entries.map(entry => {
             if (!entry.date || isNaN(entry.hours)) {
               console.warn(`Invalid entry: ${JSON.stringify(entry)}`);
@@ -721,7 +712,6 @@
             return;
           }
 
-          // Configure chart
           const maxHours = entries.length > 0 ? Math.max(...entries.map(entry => entry.hours)) : 10;
           const maxValue = Math.ceil(maxHours);
           const startDate = new Date("2024-12-14");
@@ -759,7 +749,6 @@
           };
           console.log("Heatmap option:", option);
 
-          // Set chart options
           state.charts.calendarChart.setOption(option);
         } catch (error) {
           console.error("Error rendering heatmap:", error);
@@ -933,14 +922,14 @@
           if (state.charts.heatmapStatsPie) state.charts.heatmapStatsPie.resize();
         });
 
-        elements.maximizeWeeklyTrendBtn.addEventListener("click", () => {
-          elements.weeklyTrendChart.style.height = "80vh";
-          if (state.charts.weeklyTrendChart) state.charts.weeklyTrendChart.resize();
+        elements.maximizeWeeklyHoursBtn.addEventListener("click", () => {
+          elements.weeklyHoursDistribution.style.height = "80vh";
+          if (state.charts.weeklyHoursDistribution) state.charts.weeklyHoursDistribution.resize();
         });
 
-        elements.minimizeWeeklyTrendBtn.addEventListener("click", () => {
-          elements.weeklyTrendChart.style.height = "";
-          if (state.charts.weeklyTrendChart) state.charts.weeklyTrendChart.resize();
+        elements.minimizeWeeklyHoursBtn.addEventListener("click", () => {
+          elements.weeklyHoursDistribution.style.height = "";
+          if (state.charts.weeklyHoursDistribution) state.charts.weeklyHoursDistribution.resize();
         });
 
         document.querySelectorAll(".info-icon").forEach(icon => {
@@ -960,7 +949,7 @@
 
       const init = () => {
         try {
-          if (!elements.entriesTable || !elements.weeklyTrendChart || !elements.calendarHeatmap || !elements.heatmapStatsPie) {
+          if (!elements.entriesTable || !elements.weeklyHoursDistribution || !elements.calendarHeatmap || !elements.heatmapStatsPie) {
             console.error("Critical DOM elements missing");
             elements.fallbackMessage.textContent = "Page rendering error. Please check your browser or refresh.";
             elements.fallbackMessage.style.display = "block";
