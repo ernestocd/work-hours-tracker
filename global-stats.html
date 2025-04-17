@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Work Hours Tracker - Global Statistics</title>
+  <title>Work Hours Tracker - Overall Insights</title>
   <link rel="apple-touch-icon" sizes="180x180" href="img/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png">
@@ -56,11 +56,7 @@
       margin-top: 1rem;
     }
     #calendar-heatmap {
-      min-height: 300px;
-      width: 100%;
-    }
-    #weekly-hours-distribution {
-      min-height: 300px;
+      height: 300px;
       width: 100%;
     }
     .table-container {
@@ -228,27 +224,26 @@
       .btn-sm { font-size: 0.75rem; }
       .stat-box p { font-size: 0.8rem; }
       .info-icon { font-size: 0.8rem; }
-      #calendar-heatmap { min-height: 200px; }
-      #weekly-hours-distribution { min-height: 200px; }
       .stat-item { flex: 1 1 100%; }
       .stat-icon { font-size: 1rem; }
       .filter-section { padding: 0.5rem 0; }
+      #calendar-heatmap { height: 200px; }
     }
   </style>
 </head>
 <body>
   <nav class="navbar navbar-expand-lg navbar-light">
     <div class="container-fluid">
-      <a class="navbar-brand" href="#">Work Hours Tracker</a>
+      <a class="navbar-brand" href="#">📊 Work Hours Tracker</a>
       <div class="navbar-nav">
         <a class="nav-link" href="workweek-stats.html">Workweek Statistics</a>
-        <a class="nav-link active" href="global-stats.html">Global Statistics</a>
+        <a class="nav-link active" href="global-stats.html">Overall Insights</a>
       </div>
     </div>
   </nav>
 
   <div class="container">
-    <h1 class="mb-3">📊 Global Statistics</h1>
+    <h1 class="mb-3">Overall Insights</h1>
 
     <div class="filter-section">
       <button type="button" id="toggleTableBtn" class="btn btn-outline-primary action-btn" title="Show/Hide Table" aria-label="Show/Hide Table">📋</button>
@@ -283,7 +278,7 @@
     <div class="row">
       <div class="col-md-4 stat-box">
         <h5>Total Work Summary</h5>
-        <p><strong id="globalTotal">0</strong> hrs across <span id="weeksCount">0</span> weeks</p>
+        <p><strong id="overallTotal">0</strong> hrs across <span id="weeksCount">0</span> weeks</p>
         <div class="progress mb-2">
           <div id="progressBar" class="progress-bar" role="progressbar" style="width: 0%;"></div>
         </div>
@@ -298,7 +293,7 @@
         <div class="stat-row">
           <div class="stat-item">
             <span class="stat-icon">⏰</span>
-            <p>Total Hours: <strong id="globalTotalHours">0</strong></p>
+            <p>Total Hours: <strong id="overallTotalHours">0</strong></p>
           </div>
           <div class="stat-item">
             <span class="stat-icon">📅</span>
@@ -307,7 +302,7 @@
           <div class="stat-item">
             <span class="stat-icon">📈</span>
             <div style="width: 100%;">
-              <p>Avg hrs/Week: <strong id="globalAvg">0</strong><span id="avgTrend" class="trend-arrow"></span></p>
+              <p>Avg hrs/Week: <strong id="overallAvg">0</strong><span id="avgTrend" class="trend-arrow"></span></p>
               <div class="progress mb-2">
                 <div id="avgProgressBar" class="progress-bar" role="progressbar" style="width: 0%;"></div>
               </div>
@@ -348,15 +343,11 @@
       <div class="col-md-6 stat-box">
         <h5>Weekly Hours Distribution</h5>
         <p class="text-muted small">Shows total hours worked per day of the week across all data, highlighting your work patterns. Compare with Real-World Comparison to see how your daily efforts contribute to weekly goals. Tip: Balance high-effort days (where hours are significantly above your average) with lighter ones to avoid burnout.</p>
-        <button class="btn btn-outline-secondary btn-sm maximize-btn" id="maximizeWeeklyHoursBtn" aria-label="Maximize Chart">Maximize</button>
-        <button class="btn btn-outline-secondary btn-sm minimize-btn" id="minimizeWeeklyHoursBtn" aria-label="Minimize Chart">Minimize</button>
         <canvas id="weekly-hours-distribution"></canvas>
       </div>
       <div class="col-md-6 stat-box">
         <h5>Calendar Heatmap</h5>
         <p class="text-muted small">Visualizes daily hours over time, with colors indicating intensity (red: 0 hrs, dark green: 8+ hrs). Use with Total Work Summary to spot trends in your tracked data. Tip: Look for consistent patterns to maintain steady progress.</p>
-        <button class="btn btn-outline-secondary btn-sm maximize-btn" id="maximizeCalendarBtn" aria-label="Maximize Chart">Maximize</button>
-        <button class="btn btn-outline-secondary btn-sm minimize-btn" id="minimizeCalendarBtn" aria-label="Minimize Chart">Minimize</button>
         <div id="calendar-heatmap"></div>
       </div>
     </div>
@@ -365,8 +356,6 @@
       <div class="col-md-6 stat-box">
         <h5>Heatmap Statistics (Days)</h5>
         <p class="text-muted small">Breaks down daily hours into ranges (e.g., 0 hrs, 0–2 hrs, 8+ hrs) across all days worked. Ties to Calendar Heatmap by summarizing daily intensity. Tip: Aim for more 6–8 hr days to boost your Avg hrs/Day in Work Insights.</p>
-        <button class="btn btn-outline-secondary btn-sm maximize-btn" id="maximizeHeatmapStatsBtn" aria-label="Maximize Chart">Maximize</button>
-        <button class="btn btn-outline-secondary btn-sm minimize-btn" id="minimizeHeatmapStatsBtn" aria-label="Minimize Chart">Minimize</button>
         <canvas id="heatmap-stats-pie"></canvas>
       </div>
     </div>
@@ -409,15 +398,15 @@
         addBtn: document.getElementById("addBtn"),
         toggleTableBtn: document.getElementById("toggleTableBtn"),
         tableContainer: document.getElementById("tableContainer"),
-        globalTotal: document.getElementById("globalTotal"),
-        globalTotalHours: document.getElementById("globalTotalHours"),
+        overallTotal: document.getElementById("overallTotal"),
+        overallTotalHours: document.getElementById("overallTotalHours"),
         weeksCount: document.getElementById("weeksCount"),
         progressBar: document.getElementById("progressBar"),
         progressPercent: document.getElementById("progressPercent"),
         progressStatus: document.getElementById("progressStatus"),
         totalSummaryNote: document.getElementById("totalSummaryNote"),
         weeksTracked: document.getElementById("weeksTracked"),
-        globalAvg: document.getElementById("globalAvg"),
+        overallAvg: document.getElementById("overallAvg"),
         avgProgressBar: document.getElementById("avgProgressBar"),
         avgTrend: document.getElementById("avgTrend"),
         goalWeeks: document.getElementById("goalWeeks"),
@@ -432,15 +421,9 @@
         realWorldMessage: document.getElementById("realWorldMessage"),
         donutChart: document.getElementById("donutChart"),
         calendarHeatmap: document.getElementById("calendar-heatmap"),
-        maximizeCalendarBtn: document.getElementById("maximizeCalendarBtn"),
-        minimizeCalendarBtn: document.getElementById("minimizeCalendarBtn"),
         heatmapStatsPie: document.getElementById("heatmap-stats-pie"),
-        maximizeHeatmapStatsBtn: document.getElementById("maximizeHeatmapStatsBtn"),
-        minimizeHeatmapStatsBtn: document.getElementById("minimizeHeatmapStatsBtn"),
         workedVsNotWorkedChart: document.getElementById("worked-vs-not-worked-chart"),
         weeklyHoursDistribution: document.getElementById("weekly-hours-distribution"),
-        maximizeWeeklyHoursBtn: document.getElementById("maximizeWeeklyHoursBtn"),
-        minimizeWeeklyHoursBtn: document.getElementById("minimizeWeeklyHoursBtn"),
         loadingSpinner: document.getElementById("loadingSpinner"),
         infoModalBody: document.getElementById("infoModalBody"),
         fallbackMessage: document.getElementById("fallbackMessage")
@@ -572,9 +555,9 @@
         }
         renderTable(entries);
         updateTotalStats(entries);
-        updateGlobalStats(entries);
+        updateOverallStats(entries);
         renderHeatmapStatsPie(entries);
-        setTimeout(() => renderCalendarHeatmap(entries), 100); // Delay for DOM rendering
+        setTimeout(() => renderCalendarHeatmap(entries), 100);
       };
 
       const updateTotalStats = (entries) => {
@@ -582,7 +565,7 @@
         const weeksInPeriod = countWeeksInRange(entries);
         const expectedHours = weeksInPeriod * 40; // 40 hours/week
 
-        elements.globalTotal.textContent = totalHours.toFixed(2);
+        elements.overallTotal.textContent = totalHours.toFixed(2);
         elements.weeksCount.textContent = weeksInPeriod;
 
         const percent = expectedHours > 0 ? Math.min(100, (totalHours / expectedHours) * 100) : 0;
@@ -618,8 +601,8 @@
         });
       };
 
-      const updateGlobalStats = (entries) => {
-        const globalTotal = entries.reduce((sum, e) => sum + e.hours, 0);
+      const updateOverallStats = (entries) => {
+        const overallTotal = entries.reduce((sum, e) => sum + e.hours, 0);
         const weeks = {};
         const uniqueDays = new Set();
         const hoursByDate = {};
@@ -635,8 +618,8 @@
         const totalDays = uniqueDates.size;
         const daysWorkedCount = uniqueDays.size;
         const daysNotWorked = totalDays - daysWorkedCount;
-        const avgWeek = totalWeeks > 0 ? globalTotal / totalWeeks : 0;
-        const avgDay = totalDays > 0 ? globalTotal / totalDays : 0;
+        const avgWeek = totalWeeks > 0 ? overallTotal / totalWeeks : 0;
+        const avgDay = totalDays > 0 ? overallTotal / totalDays : 0;
         const maxDay = Object.values(hoursByDate).length > 0 ? Math.max(...Object.values(hoursByDate), 0) : 0;
         const goalWeeks = Object.values(weeks).filter(hours => hours >= 40).length;
 
@@ -651,7 +634,7 @@
           const date = new Date(h);
           return date >= new Date("2024-12-14") && date <= new Date("2025-04-18");
         }).length;
-        const expectedHoursPerWeek = 40; // Fixed 40 hours/week
+        const expectedHoursPerWeek = 40;
 
         const avgVsFullTimePercent = totalWeeks > 0 ? (avgWeek / expectedHoursPerWeek) * 100 : 0;
         const recentAvgVsFullTimePercent = recentWeeks > 0 ? (recentAvgWeek / expectedHoursPerWeek) * 100 : 0;
@@ -665,10 +648,9 @@
         else if (avgVsFullTimePercent >= 20) performanceLevel = "Minimal Effort";
         else if (avgVsFullTimePercent > 0) performanceLevel = "Negligible";
 
-        // Work Insights Updates
-        elements.globalTotalHours.textContent = globalTotal.toFixed(2);
+        elements.overallTotalHours.textContent = overallTotal.toFixed(2);
         elements.weeksTracked.textContent = totalWeeks;
-        elements.globalAvg.textContent = avgWeek.toFixed(1);
+        elements.overallAvg.textContent = avgWeek.toFixed(1);
         const avgPercent = Math.min(100, (avgWeek / 40) * 100);
         elements.avgProgressBar.style.width = `${avgPercent}%`;
         if (avgWeek >= 40) {
@@ -766,7 +748,6 @@
           });
         }
 
-        // Weekly Hours Distribution Bar Chart
         if (state.charts.weeklyHoursDistribution) state.charts.weeklyHoursDistribution.destroy();
         state.charts.weeklyHoursDistribution = new Chart(elements.weeklyHoursDistribution, {
           type: "bar",
@@ -793,7 +774,7 @@
         });
       };
 
-      const renderCalendarHeatmap = (entries) => {
+      const renderCalendarHeatmap = (entries, retryCount = 0) => {
         if (!elements.calendarHeatmap) {
           console.error("Calendar heatmap element not found");
           showError("Failed to render heatmap. Please refresh.");
@@ -813,9 +794,14 @@
         try {
           const rect = elements.calendarHeatmap.getBoundingClientRect();
           console.log("Calendar heatmap dimensions:", { width: rect.width, height: rect.height });
+          if ((rect.width === 0 || rect.height === 0) && retryCount < 3) {
+            console.warn("Calendar heatmap has zero dimensions, retrying...");
+            setTimeout(() => renderCalendarHeatmap(entries, retryCount + 1), 500);
+            return;
+          }
           if (rect.width === 0 || rect.height === 0) {
-            console.warn("Calendar heatmap has zero dimensions");
-            elements.calendarHeatmap.innerHTML = `<p class="text-muted">Heatmap container not visible. Try resizing the window.</p>`;
+            console.error("Calendar heatmap dimensions still zero after retries");
+            elements.calendarHeatmap.innerHTML = `<p class="text-muted">Heatmap container not visible. Try refreshing the page.</p>`;
             return;
           }
 
@@ -1024,36 +1010,6 @@
           const wb = XLSX.utils.book_new();
           XLSX.utils.book_append_sheet(wb, ws, "Work Hours");
           XLSX.writeFile(wb, "work_hours.xlsx");
-        });
-
-        elements.maximizeCalendarBtn.addEventListener("click", () => {
-          elements.calendarHeatmap.style.height = "80vh";
-          if (state.charts.calendarChart) state.charts.calendarChart.resize();
-        });
-
-        elements.minimizeCalendarBtn.addEventListener("click", () => {
-          elements.calendarHeatmap.style.height = "";
-          if (state.charts.calendarChart) state.charts.calendarChart.resize();
-        });
-
-        elements.maximizeHeatmapStatsBtn.addEventListener("click", () => {
-          elements.heatmapStatsPie.style.height = "80vh";
-          if (state.charts.heatmapStatsPie) state.charts.heatmapStatsPie.resize();
-        });
-
-        elements.minimizeHeatmapStatsBtn.addEventListener("click", () => {
-          elements.heatmapStatsPie.style.height = "";
-          if (state.charts.heatmapStatsPie) state.charts.heatmapStatsPie.resize();
-        });
-
-        elements.maximizeWeeklyHoursBtn.addEventListener("click", () => {
-          elements.weeklyHoursDistribution.style.height = "80vh";
-          if (state.charts.weeklyHoursDistribution) state.charts.weeklyHoursDistribution.resize();
-        });
-
-        elements.minimizeWeeklyHoursBtn.addEventListener("click", () => {
-          elements.weeklyHoursDistribution.style.height = "";
-          if (state.charts.weeklyHoursDistribution) state.charts.weeklyHoursDistribution.resize();
         });
 
         document.querySelectorAll(".info-icon").forEach(icon => {
