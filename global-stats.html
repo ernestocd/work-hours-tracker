@@ -173,6 +173,53 @@
     .text-success {
       color: #28a745 !important;
     }
+    .text-warning {
+      color: #ff9800 !important;
+    }
+    .text-danger {
+      color: #dc3545 !important;
+    }
+    /* Styles for Work Insights */
+    .stat-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .stat-item {
+      flex: 1 1 45%;
+      padding: 0.5rem;
+      border-radius: 5px;
+      background: #f9fbfc;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .stat-item.daily {
+      background: #f1f3f5;
+    }
+    .stat-icon {
+      font-size: 1.2rem;
+    }
+    .trend-arrow {
+      font-size: 0.9rem;
+      margin-left: 0.25rem;
+    }
+    .progress-bar-success {
+      background: #28a745;
+    }
+    .progress-bar-warning {
+      background: #ff9800;
+    }
+    .progress-bar-danger {
+      background: #dc3545;
+    }
+    /* Adjusted filter section */
+    .filter-section {
+      display: flex;
+      justify-content: center;
+      padding: 1rem 0;
+      margin-bottom: 1rem;
+    }
     @media (max-width: 576px) {
       body { padding: 1rem; }
       h1 { font-size: 1.5rem; }
@@ -183,6 +230,9 @@
       .info-icon { font-size: 0.8rem; }
       #calendar-heatmap { min-height: 200px; }
       #weekly-hours-distribution { min-height: 200px; }
+      .stat-item { flex: 1 1 100%; }
+      .stat-icon { font-size: 1rem; }
+      .filter-section { padding: 0.5rem 0; }
     }
   </style>
 </head>
@@ -200,12 +250,8 @@
   <div class="container">
     <h1 class="mb-3">📊 Global Statistics</h1>
 
-    <div class="filter-sticky">
-      <div class="row g-2 align-items-center">
-        <div class="col-12 filter-buttons-row">
-          <button type="button" id="toggleTableBtn" class="btn btn-outline-primary action-btn" title="Show/Hide Table" aria-label="Show/Hide Table">📋</button>
-        </div>
-      </div>
+    <div class="filter-section">
+      <button type="button" id="toggleTableBtn" class="btn btn-outline-primary action-btn" title="Show/Hide Table" aria-label="Show/Hide Table">📋</button>
     </div>
 
     <div class="loading-spinner" id="loadingSpinner"></div>
@@ -249,14 +295,41 @@
 
       <div class="col-md-4 stat-box">
         <h5>Work Insights</h5>
-        <p>Total Hours: <strong id="globalTotalHours">0</strong></p>
-        <p>Weeks Tracked: <strong id="weeksTracked">0</strong></p>
-        <p>Avg hrs/Week: <strong id="globalAvg">0</strong></p>
-        <p>Successful Weeks: <strong id="goalWeeks">0</strong></p>
-        <p>Days Worked: <strong id="daysWorked">0/0</strong></p>
-        <hr class="my-2 opacity-25">
-        <p>Longest Day Worked: <strong id="longestDayWorked">0 hrs</strong></p>
-        <p>Avg hrs/Day: <strong id="avgHoursDay">0</strong></p>
+        <div class="stat-row">
+          <div class="stat-item">
+            <span class="stat-icon">⏰</span>
+            <p>Total Hours: <strong id="globalTotalHours">0</strong></p>
+          </div>
+          <div class="stat-item">
+            <span class="stat-icon">📅</span>
+            <p>Weeks Tracked: <strong id="weeksTracked">0</strong></p>
+          </div>
+          <div class="stat-item">
+            <span class="stat-icon">📈</span>
+            <div style="width: 100%;">
+              <p>Avg hrs/Week: <strong id="globalAvg">0</strong><span id="avgTrend" class="trend-arrow"></span></p>
+              <div class="progress mb-2">
+                <div id="avgProgressBar" class="progress-bar" role="progressbar" style="width: 0%;"></div>
+              </div>
+            </div>
+          </div>
+          <div class="stat-item">
+            <span class="stat-icon">✅</span>
+            <p>Successful Weeks: <strong id="goalWeeks">0</strong></p>
+          </div>
+          <div class="stat-item">
+            <span class="stat-icon">🗓️</span>
+            <p>Days Worked: <strong id="daysWorked">0/0</strong></p>
+          </div>
+          <div class="stat-item daily">
+            <span class="stat-icon">🌞</span>
+            <p>Longest Day Worked: <strong id="longestDayWorked">0 hrs</strong></p>
+          </div>
+          <div class="stat-item daily">
+            <span class="stat-icon">⏳</span>
+            <p>Avg hrs/Day: <strong id="avgHoursDay">0</strong></p>
+          </div>
+        </div>
         <canvas id="worked-vs-not-worked-chart"></canvas>
       </div>
 
@@ -274,13 +347,14 @@
     <div class="row mt-4">
       <div class="col-md-6 stat-box">
         <h5>Weekly Hours Distribution</h5>
-        <p class="text-muted small">Hours worked per day of the week across the entire dataset.</p>
+        <p class="text-muted small">Shows total hours worked per day of the week across all data, highlighting your work patterns. Compare with Real-World Comparison to see how your daily efforts contribute to weekly goals. Tip: Balance high-effort days (where hours are significantly above your average) with lighter ones to avoid burnout.</p>
         <button class="btn btn-outline-secondary btn-sm maximize-btn" id="maximizeWeeklyHoursBtn" aria-label="Maximize Chart">Maximize</button>
         <button class="btn btn-outline-secondary btn-sm minimize-btn" id="minimizeWeeklyHoursBtn" aria-label="Minimize Chart">Minimize</button>
         <canvas id="weekly-hours-distribution"></canvas>
       </div>
       <div class="col-md-6 stat-box">
         <h5>Calendar Heatmap</h5>
+        <p class="text-muted small">Visualizes daily hours over time, with colors indicating intensity (red: 0 hrs, dark green: 8+ hrs). Use with Total Work Summary to spot trends in your tracked data. Tip: Look for consistent patterns to maintain steady progress.</p>
         <button class="btn btn-outline-secondary btn-sm maximize-btn" id="maximizeCalendarBtn" aria-label="Maximize Chart">Maximize</button>
         <button class="btn btn-outline-secondary btn-sm minimize-btn" id="minimizeCalendarBtn" aria-label="Minimize Chart">Minimize</button>
         <div id="calendar-heatmap"></div>
@@ -290,6 +364,7 @@
     <div class="row mt-4">
       <div class="col-md-6 stat-box">
         <h5>Heatmap Statistics (Days)</h5>
+        <p class="text-muted small">Breaks down daily hours into ranges (e.g., 0 hrs, 0–2 hrs, 8+ hrs) across all days worked. Ties to Calendar Heatmap by summarizing daily intensity. Tip: Aim for more 6–8 hr days to boost your Avg hrs/Day in Work Insights.</p>
         <button class="btn btn-outline-secondary btn-sm maximize-btn" id="maximizeHeatmapStatsBtn" aria-label="Maximize Chart">Maximize</button>
         <button class="btn btn-outline-secondary btn-sm minimize-btn" id="minimizeHeatmapStatsBtn" aria-label="Minimize Chart">Minimize</button>
         <canvas id="heatmap-stats-pie"></canvas>
@@ -343,6 +418,8 @@
         totalSummaryNote: document.getElementById("totalSummaryNote"),
         weeksTracked: document.getElementById("weeksTracked"),
         globalAvg: document.getElementById("globalAvg"),
+        avgProgressBar: document.getElementById("avgProgressBar"),
+        avgTrend: document.getElementById("avgTrend"),
         goalWeeks: document.getElementById("goalWeeks"),
         daysWorked: document.getElementById("daysWorked"),
         longestDayWorked: document.getElementById("longestDayWorked"),
@@ -360,6 +437,7 @@
         heatmapStatsPie: document.getElementById("heatmap-stats-pie"),
         maximizeHeatmapStatsBtn: document.getElementById("maximizeHeatmapStatsBtn"),
         minimizeHeatmapStatsBtn: document.getElementById("minimizeHeatmapStatsBtn"),
+        workedVsNotWorkedChart: document.getElementById("worked-vs-not-worked-chart"),
         weeklyHoursDistribution: document.getElementById("weekly-hours-distribution"),
         maximizeWeeklyHoursBtn: document.getElementById("maximizeWeeklyHoursBtn"),
         minimizeWeeklyHoursBtn: document.getElementById("minimizeWeeklyHoursBtn"),
@@ -487,7 +565,7 @@
       };
 
       const updateUI = (entries) => {
-        if (!elements.weeklyHoursDistribution || !elements.calendarHeatmap || !elements.heatmapStatsPie) {
+        if (!elements.weeklyHoursDistribution || !elements.calendarHeatmap || !elements.heatmapStatsPie || !elements.workedVsNotWorkedChart) {
           console.error("Missing DOM elements for widgets");
           showError("Page rendering error. Please refresh.");
           return;
@@ -553,7 +631,8 @@
         });
 
         const totalWeeks = countWeeksInRange(entries);
-        const totalDays = new Set(entries.map(e => e.date)).size;
+        const uniqueDates = new Set(entries.map(e => e.date));
+        const totalDays = uniqueDates.size;
         const daysWorkedCount = uniqueDays.size;
         const daysNotWorked = totalDays - daysWorkedCount;
         const avgWeek = totalWeeks > 0 ? globalTotal / totalWeeks : 0;
@@ -586,13 +665,41 @@
         else if (avgVsFullTimePercent >= 20) performanceLevel = "Minimal Effort";
         else if (avgVsFullTimePercent > 0) performanceLevel = "Negligible";
 
+        // Work Insights Updates
         elements.globalTotalHours.textContent = globalTotal.toFixed(2);
         elements.weeksTracked.textContent = totalWeeks;
         elements.globalAvg.textContent = avgWeek.toFixed(1);
-        elements.avgHoursDay.textContent = avgDay.toFixed(1);
-        elements.longestDayWorked.textContent = maxDay.toFixed(1) + " hrs";
+        const avgPercent = Math.min(100, (avgWeek / 40) * 100);
+        elements.avgProgressBar.style.width = `${avgPercent}%`;
+        if (avgWeek >= 40) {
+          elements.avgProgressBar.classList.add("progress-bar-success");
+        } else if (avgWeek >= 20) {
+          elements.avgProgressBar.classList.add("progress-bar-warning");
+        } else {
+          elements.avgProgressBar.classList.add("progress-bar-danger");
+        }
+        if (recentAvgWeek > avgWeek) {
+          elements.avgTrend.textContent = "↑";
+          elements.avgTrend.classList.add("text-success");
+        } else if (recentAvgWeek < avgWeek) {
+          elements.avgTrend.textContent = "↓";
+          elements.avgTrend.classList.add("text-danger");
+        }
         elements.goalWeeks.textContent = goalWeeks;
+        if (totalWeeks > 0 && goalWeeks / totalWeeks >= 0.5) {
+          elements.goalWeeks.classList.add("text-success");
+        }
         elements.daysWorked.textContent = `${daysWorkedCount}/${totalDays}`;
+        elements.longestDayWorked.textContent = maxDay.toFixed(1) + " hrs";
+        elements.avgHoursDay.textContent = avgDay.toFixed(1);
+        if (avgDay >= 6) {
+          elements.avgHoursDay.classList.add("text-success");
+        } else if (avgDay >= 3) {
+          elements.avgHoursDay.classList.add("text-warning");
+        } else {
+          elements.avgHoursDay.classList.add("text-danger");
+        }
+
         elements.weeklyVsFullTime.textContent = avgVsFullTimePercent.toFixed(1) + "%";
         elements.performanceLevel.textContent = performanceLevel;
         elements.workdayParticipation.textContent = attendancePercent + "%";
@@ -627,20 +734,37 @@
         }
 
         if (state.charts.workedVsNotWorkedChart) state.charts.workedVsNotWorkedChart.destroy();
-        state.charts.workedVsNotWorkedChart = new Chart(elements.workedVsNotWorkedChart, {
-          type: "doughnut",
-          data: {
-            labels: [`Worked Days: ${daysWorkedCount} (${Math.round((daysWorkedCount / totalDays) * 100)}%)`, `Not Worked Days: ${daysNotWorked} (${Math.round((daysNotWorked / totalDays) * 100)}%)`],
-            datasets: [{ data: [daysWorkedCount, daysNotWorked], backgroundColor: ["#28a745", "#dc3545"] }]
-          },
-          options: {
-            cutout: "75%",
-            plugins: {
-              legend: { position: "bottom", labels: { font: { size: 12, family: "'Inter', sans-serif" } } },
-              title: { display: true, text: "Worked vs Not Worked Days", padding: { top: 10, bottom: 10 }, font: { size: 14, family: "'Inter', sans-serif", weight: "500" } }
+        const chartData = [daysWorkedCount, daysNotWorked];
+        if (chartData.every(val => val === 0)) {
+          elements.workedVsNotWorkedChart.parentElement.insertAdjacentHTML("beforebegin", `<p class="text-muted small">No data available to display chart.</p>`);
+        } else {
+          state.charts.workedVsNotWorkedChart = new Chart(elements.workedVsNotWorkedChart, {
+            type: "doughnut",
+            data: {
+              labels: [`Worked Days: ${daysWorkedCount} (${Math.round((daysWorkedCount / totalDays) * 100)}%)`, `Not Worked Days: ${daysNotWorked} (${Math.round((daysNotWorked / totalDays) * 100)}%)`],
+              datasets: [{ data: chartData, backgroundColor: ["#28a745", "#dc3545"] }]
+            },
+            options: {
+              cutout: "75%",
+              animation: {
+                animateScale: true,
+                animateRotate: true,
+                duration: 1000
+              },
+              plugins: {
+                legend: { position: "bottom", labels: { font: { size: 12, family: "'Inter', sans-serif" } } },
+                title: { display: true, text: "Worked vs Not Worked Days", padding: { top: 10, bottom: 10 }, font: { size: 14, family: "'Inter', sans-serif", weight: "500" } },
+                tooltip: {
+                  callbacks: {
+                    label: function(context) {
+                      return context.label;
+                    }
+                  }
+                }
+              }
             }
-          }
-        });
+          });
+        }
 
         // Weekly Hours Distribution Bar Chart
         if (state.charts.weeklyHoursDistribution) state.charts.weeklyHoursDistribution.destroy();
@@ -949,7 +1073,7 @@
 
       const init = () => {
         try {
-          if (!elements.entriesTable || !elements.weeklyHoursDistribution || !elements.calendarHeatmap || !elements.heatmapStatsPie) {
+          if (!elements.entriesTable || !elements.weeklyHoursDistribution || !elements.calendarHeatmap || !elements.heatmapStatsPie || !elements.workedVsNotWorkedChart) {
             console.error("Critical DOM elements missing");
             elements.fallbackMessage.textContent = "Page rendering error. Please check your browser or refresh.";
             elements.fallbackMessage.style.display = "block";
