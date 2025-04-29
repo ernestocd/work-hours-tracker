@@ -3,15 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://*.firebaseio.com https://*.googleapis.com 'unsafe-inline'; script-src-elem 'self' https://www.gstatic.com https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://*.firebaseio.com https://*.googleapis.com 'unsafe-inline'; connect-src 'self' https://work-hours-tracker-f48a6-default-rtdb.firebaseio.com https://*.googleapis.com wss://*.firebaseio.com; style-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; frame-src 'self' https://*.firebaseio.com;">
-  <title>Work Hours Tracker - Manual Hours</title>
+  <title>Work Hours Tracker - Manual Hours + Edit/Cancel</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
 </head>
 <body>
   <div class="container mt-5">
     <h1 class="mb-4">Work Hours Tracker</h1>
 
-    <!-- Add/Edit Entry Form -->
+    <!-- Entry Form -->
     <div class="card mb-4">
       <div class="card-body">
         <h5 class="card-title">Add or Edit Entry</h5>
@@ -32,7 +31,8 @@
             <label for="hours" class="form-label">Hours Worked</label>
             <input type="number" class="form-control" id="hours" step="0.01" min="0" required />
           </div>
-          <button type="submit" class="btn btn-primary" id="submitButton">Add Entry</button>
+          <button type="submit" class="btn btn-primary me-2" id="submitButton">Add Entry</button>
+          <button type="button" class="btn btn-secondary" id="cancelEditButton" style="display: none;">Cancel</button>
         </form>
         <div id="formFeedback" class="mt-3"></div>
       </div>
@@ -79,27 +79,27 @@
       appId: "1:945814366512:web:778a312b936701199940f5"
     };
 
-    let database;
-    try {
-      const app = firebase.initializeApp(firebaseConfig);
-      database = firebase.database();
-      showFeedback("Firebase initialized successfully!", "success");
-    } catch (error) {
-      showFeedback("Failed to initialize Firebase: " + error.message, "danger");
-      throw error;
-    }
-
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
     const entriesRef = database.ref("entries");
+
     const entryForm = document.getElementById("entryForm");
     const tableBody = document.getElementById("entriesTableBody");
-
     const dateInput = document.getElementById("date");
     const startTimeInput = document.getElementById("startTime12");
     const endTimeInput = document.getElementById("endTime12");
     const hoursInput = document.getElementById("hours");
     const submitButton = document.getElementById("submitButton");
+    const cancelEditButton = document.getElementById("cancelEditButton");
 
     let editingKey = null;
+
+    function resetForm() {
+      entryForm.reset();
+      editingKey = null;
+      submitButton.textContent = "Add Entry";
+      cancelEditButton.style.display = "none";
+    }
 
     entryForm.addEventListener("submit", function (e) {
       e.preventDefault();
@@ -125,9 +125,7 @@
         entriesRef.child(editingKey).update(entryData)
           .then(() => {
             showFeedback("Entry updated successfully!", "success");
-            entryForm.reset();
-            editingKey = null;
-            submitButton.textContent = "Add Entry";
+            resetForm();
           })
           .catch(error => {
             showFeedback("Failed to update entry: " + error.message, "danger");
@@ -136,13 +134,15 @@
         entriesRef.push(entryData)
           .then(() => {
             showFeedback("Entry added successfully!", "success");
-            entryForm.reset();
+            resetForm();
           })
           .catch(error => {
             showFeedback("Failed to add entry: " + error.message, "danger");
           });
       }
     });
+
+    cancelEditButton.addEventListener("click", resetForm);
 
     function editEntry(key, data) {
       dateInput.value = data.date || "";
@@ -151,7 +151,8 @@
       hoursInput.value = data.hours || "";
       editingKey = key;
       submitButton.textContent = "Update Entry";
-      showFeedback("Editing entry. Make changes and submit.", "info");
+      cancelEditButton.style.display = "inline-block";
+      showFeedback("Editing entry. Submit or cancel.", "info");
     }
 
     function deleteEntry(key) {
