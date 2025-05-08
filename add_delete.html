@@ -21,11 +21,11 @@
           </div>
           <div class="mb-3">
             <label for="startTime12" class="form-label">Start Time</label>
-            <input type="time" class="form-control" id="startTime12" required />
+            <input type="time" class="form-control" id="startTime12" />
           </div>
           <div class="mb-3">
             <label for="endTime12" class="form-label">End Time</label>
-            <input type="time" class="form-control" id="endTime12" required />
+            <input type="time" class="form-control" id="endTime12" />
           </div>
           <div class="mb-3">
             <label for="hours" class="form-label">Hours Worked</label>
@@ -103,24 +103,33 @@
 
     entryForm.addEventListener("submit", function (e) {
       e.preventDefault();
-
+    
       const date = dateInput.value;
-      const hours = parseFloat(hoursInput.value);
+      const hours = parseFloat(hoursInput.value) || 0; // Default to 0 if NaN
       const startTime = startTimeInput.value;
       const endTime = endTimeInput.value;
-
-      if (!date || isNaN(hours) || hours < 0 || !startTime || !endTime) {
-        showFeedback("Please fill in all fields correctly.", "warning");
+    
+      // Validate inputs
+      if (!date) {
+        showFeedback("Please enter a valid date.", "warning");
         return;
       }
-
+      if (isNaN(hours) || hours < 0) {
+        showFeedback("Please enter valid hours (0 or positive).", "warning");
+        return;
+      }
+      if (hours > 0 && (!startTime || !endTime)) {
+        showFeedback("Start and end times are required when hours are greater than 0.", "warning");
+        return;
+      }
+    
       const entryData = {
         date: date,
         hours: hours,
-        start_time: startTime,
-        end_time: endTime
+        start_time: hours > 0 ? startTime : "", // Store empty string if hours is 0
+        end_time: hours > 0 ? endTime : ""      // Store empty string if hours is 0
       };
-
+    
       if (editingKey) {
         entriesRef.child(editingKey).update(entryData)
           .then(() => {
